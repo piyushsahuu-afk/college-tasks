@@ -826,6 +826,17 @@
 
     let cloudWritesPaused = false;
     let pendingFirebaseProfile = null;
+    // Coalesce rapid local saves into one cloud write after the user pauses briefly.
+    // This reduces duplicate writes without changing the Firebase data structure.
+    let cloudPushTimer = null;
+    function scheduleCloudPush(delay = 700) {
+      if (cloudWritesPaused || !currentUser || !currentUser.uid || !getCloudDbUrl()) return;
+      if (cloudPushTimer) clearTimeout(cloudPushTimer);
+      cloudPushTimer = setTimeout(() => {
+        cloudPushTimer = null;
+        pushCurrentUserToCloud();
+      }, delay);
+    }
 
     function firebaseAuthReady() {
       return typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.auth().currentUser;
@@ -1050,7 +1061,7 @@
       } catch (err) {
         console.warn('Failed to save subjects:', err);
       }
-      pushCurrentUserToCloud();
+      scheduleCloudPush();
     }
 
     function loadTasks() {
@@ -1088,7 +1099,7 @@
           console.error('LocalStorage unavailable:', innerErr);
         }
       }
-      pushCurrentUserToCloud();
+      scheduleCloudPush();
     }
 
     function switchActiveUser(userObj) {
