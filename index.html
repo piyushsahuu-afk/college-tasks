@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>College Assignment & Homework Tracker | Made by Piyush Sahu</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -482,7 +484,7 @@
             <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
               <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                4. Private ID, Timer &amp; Cloud Sync
+                4. Secure Login, Timer &amp; Cloud Sync
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Every student gets a private login workspace, a built-in 25-minute Study Focus Timer, Cloud Sync, and one-click CSV export.
@@ -497,14 +499,14 @@
         <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
           <div>
             <h3 class="text-base font-bold text-slate-900 dark:text-white">Welcome! Sign In or Create Account</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sign in to your student workspace or connect with Google</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sign in securely to your student workspace using email and password</p>
           </div>
 
-          <!-- Continue with Google Button -->
+          <!-- Google login not enabled Button -->
           <div class="space-y-2">
             <button
               type="button"
-              id="googleConnectBtn"
+              id="googleConnectBtn" disabled
               class="w-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-semibold text-xs py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs transition flex items-center justify-center gap-2.5"
             >
               <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -513,10 +515,10 @@
                 <path fill="#FBBC05" d="M5.3 14.8c-.2-.8-.4-1.8-.4-2.8s.2-2 .4-2.8L1.6 6.4C.6 8.4 0 10.6 0 12s.6 3.6 1.6 5.6l3.7-2.8z"/>
                 <path fill="#34A853" d="M12 23c3 0 5.5-1 7.4-2.7l-3.7-2.9c-1 .7-2.3 1.1-3.7 1.1-3.1 0-5.8-2.1-6.7-5L1.6 16.3C3.5 20.4 7.4 23 12 23z"/>
               </svg>
-              <span>Continue with Google</span>
+              <span>Google login not enabled</span>
             </button>
 
-            <!-- Inline Google Account Connect Box (Toggles when clicking Continue with Google) -->
+            <!-- Inline Google Account Connect Box (Toggles when clicking Google login not enabled) -->
             <form id="googleAuthForm" class="hidden p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2.5" novalidate>
               <p class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
                 Connect Google Account (Gmail):
@@ -546,17 +548,17 @@
 
           <div class="relative flex py-1 items-center">
             <div class="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-            <span class="shrink mx-3 text-[11px] text-slate-400">or use Student User ID</span>
+            <span class="shrink mx-3 text-[11px] text-slate-400">or use Email & Password</span>
             <div class="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
           </div>
 
           <!-- Mode Switch Tabs -->
           <div class="grid grid-cols-2 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
             <button type="button" id="tabLoginBtn" class="py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition">
-              Login Existing ID
+              Login with Email
             </button>
             <button type="button" id="tabSignupBtn" class="py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition">
-              + Create New Account
+              + Create Account
             </button>
           </div>
 
@@ -565,21 +567,22 @@
           <!-- Login Form -->
           <form id="loginForm" class="space-y-3" novalidate>
             <div>
-              <label for="loginUserId" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">User ID</label>
+              <label for="loginEmail" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
               <input
                 type="text"
-                id="loginUserId"
-                placeholder="Enter your User ID"
+                id="loginEmail"
+                type="email"
+                placeholder="Enter your email address"
                 required
                 class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
               />
             </div>
             <div>
-              <label for="loginPin" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Password / PIN</label>
+              <label for="loginPin" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Password</label>
               <input
                 type="password"
                 id="loginPin"
-                placeholder="Enter your password or PIN"
+                placeholder="Enter your password"
                 class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
               />
             </div>
@@ -601,21 +604,22 @@
               />
             </div>
             <div>
-              <label for="signupUserId" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Choose Unique User ID <span class="text-rose-500">*</span></label>
+              <label for="signupEmail" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address <span class="text-rose-500">*</span></label>
               <input
                 type="text"
-                id="signupUserId"
-                placeholder="e.g., piyush_01"
+                id="signupEmail"
+                type="email"
+                placeholder="you@example.com"
                 required
                 class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
               />
             </div>
             <div>
-              <label for="signupPin" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Set Password / PIN <span class="text-rose-500">*</span></label>
+              <label for="signupPin" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Create Password (6+ characters) <span class="text-rose-500">*</span></label>
               <input
                 type="password"
                 id="signupPin"
-                placeholder="Create a secret password or PIN"
+                placeholder="Create a strong password"
                 required
                 class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
               />
@@ -669,7 +673,7 @@
           </span>
         </div>
         <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-          Paste your free <strong>Firebase Realtime Database URL</strong> below. Once connected, you and your friends can sign in with your <strong>User ID + PIN</strong> on any computer or phone with automatic cloud sync.
+          Paste your free <strong>Firebase Realtime Database URL</strong> below. Sign in with Firebase Email/Password first. Each signed-in account syncs only its own task text and subjects; photos stay on this browser.
         </p>
         <input
           type="url"
@@ -737,6 +741,30 @@
   </div>
 
   <script>
+    // Missing helper functions restored for subject/task rendering.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function (ch) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+      });
+    }
+
+    function showToast(message) {
+      const box = document.getElementById('toastBox');
+      const label = document.getElementById('toastMessage');
+      if (!box || !label) {
+        console.info(String(message ?? ''));
+        return;
+      }
+      label.textContent = String(message ?? '');
+      box.classList.remove('hidden');
+      if (window.__collegeTrackerToastTimer) {
+        clearTimeout(window.__collegeTrackerToastTimer);
+      }
+      window.__collegeTrackerToastTimer = setTimeout(() => {
+        box.classList.add('hidden');
+      }, 2600);
+    }
+
     const COLOR_PALETTES = {
       blue:    { key: 'blue',    badgeBg: 'bg-blue-50 dark:bg-blue-950/50',       badgeText: 'text-blue-700 dark:text-blue-300',       badgeBorder: 'border-blue-200 dark:border-blue-800/60',       dot: 'bg-blue-500' },
       purple:  { key: 'purple',  badgeBg: 'bg-purple-50 dark:bg-purple-950/50',   badgeText: 'text-purple-700 dark:text-purple-300',   badgeBorder: 'border-purple-200 dark:border-purple-800/60',   dot: 'bg-purple-500' },
@@ -747,6 +775,12 @@
       teal:    { key: 'teal',    badgeBg: 'bg-teal-50 dark:bg-teal-950/50',       badgeText: 'text-teal-700 dark:text-teal-300',       badgeBorder: 'border-teal-200 dark:border-teal-800/60',       dot: 'bg-teal-500' }
     };
 
+    function getSubjectStyle(subjectName) {
+      const subject = SUBJECTS.find(s => s && s.name === subjectName);
+      if (subject) return subject;
+      return COLOR_PALETTES.blue;
+    }
+
     function getDefaultSubjects() {
       // Starts with 0 subjects by default — users add, edit, and remove their own subjects!
       return [];
@@ -755,7 +789,7 @@
     let SUBJECTS = getDefaultSubjects();
 
     // Aap chahein toh apna Firebase Realtime DB URL seedha niche DEFAULT_CLOUD_DB_URL me bhi likh sakte hain:
-    const DEFAULT_CLOUD_DB_URL = '';
+    const DEFAULT_CLOUD_DB_URL = 'https://assignment-tracker-d8f2b-default-rtdb.asia-southeast1.firebasedatabase.app';
     const CLOUD_DB_URL_KEY = 'college_student_cloud_db_url_v1';
 
     const STORAGE_KEY = 'college_student_tasks_zero_v1';
@@ -778,8 +812,8 @@
       if (url) {
         if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
         if (badge) {
-          badge.textContent = 'Connected ✓';
-          badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300';
+          badge.textContent = 'URL Configured';
+          badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300';
         }
       } else {
         if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
@@ -790,53 +824,119 @@
       }
     }
 
-    async function pushCurrentUserToCloud() {
-      const baseUrl = getCloudDbUrl();
-      if (!baseUrl || !currentUser || !currentUser.userId) return;
-      try {
-        const payload = {
-          user: currentUser,
-          subjects: SUBJECTS,
-          tasks: tasks,
-          updatedAt: Date.now()
-        };
-        const putUrl = baseUrl + '/student_workspaces/' + encodeURIComponent(currentUser.userId) + '.json';
-        await fetch(putUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch (err) {
-        console.warn('Cloud push error:', err);
-      }
+    let cloudWritesPaused = false;
+    let pendingFirebaseProfile = null;
+
+    function firebaseAuthReady() {
+      return typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.auth().currentUser;
     }
 
-    async function fetchUserFromCloud(userId) {
-      const baseUrl = getCloudDbUrl();
-      if (!baseUrl || !userId) return null;
+    async function pushCurrentUserToCloud() {
+      if (cloudWritesPaused || !currentUser || !currentUser.uid || !getCloudDbUrl()) return;
+      const authUser = firebaseAuthReady();
+      if (!authUser) return;
       try {
-        const getUrl = baseUrl + '/student_workspaces/' + encodeURIComponent(userId) + '.json';
-        const res = await fetch(getUrl);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data;
-      } catch (err) {
-        console.warn('Cloud fetch error:', err);
-        return null;
-      }
+        const token = await authUser.getIdToken();
+        const payload = {
+          user: { uid: currentUser.uid, userId: currentUser.userId, name: currentUser.name, email: currentUser.email },
+          subjects: SUBJECTS,
+          // Attachments stay in this browser; only task text/metadata is synced.
+          tasks: tasks.map(({ imageData, ...task }) => ({ ...task, hasAttachment: !!imageData })),
+          updatedAt: Date.now()
+        };
+        const url = getCloudDbUrl() + '/student_workspaces/' + encodeURIComponent(currentUser.uid) + '.json?auth=' + encodeURIComponent(token);
+        const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!res.ok) console.warn('Cloud push failed:', res.status, await res.text());
+      } catch (err) { console.warn('Cloud push error:', err); }
     }
+
+    async function fetchUserFromCloud(uid) {
+      const baseUrl = getCloudDbUrl();
+      const authUser = firebaseAuthReady();
+      if (!baseUrl || !uid || !authUser || authUser.uid !== uid) return null;
+      try {
+        const token = await authUser.getIdToken();
+        const res = await fetch(baseUrl + '/student_workspaces/' + encodeURIComponent(uid) + '.json?auth=' + encodeURIComponent(token));
+        if (!res.ok) {
+          if (res.status !== 404) console.warn('Cloud fetch failed:', res.status, await res.text());
+          return null;
+        }
+        return await res.json();
+      } catch (err) { console.warn('Cloud fetch error:', err); return null; }
+    }
+
+    async function activateFirebaseSession(authUser) {
+      if (!authUser) return;
+      cloudWritesPaused = true;
+      try {
+        const remote = await fetchUserFromCloud(authUser.uid);
+        const email = (authUser.email || '').toLowerCase();
+        const localId = (pendingFirebaseProfile && pendingFirebaseProfile.email === email)
+          ? pendingFirebaseProfile.userId
+          : ((remote && remote.user && remote.user.userId) || email.split('@')[0].replace(/[^a-z0-9_-]/g, '') || 'student');
+        const displayName = (pendingFirebaseProfile && pendingFirebaseProfile.email === email && pendingFirebaseProfile.name)
+          || (remote && remote.user && remote.user.name)
+          || (authUser.displayName || email.split('@')[0] || 'Student');
+        // One-time local migration: keep this browser's old local tasks/subjects, including photos.
+        try {
+          const newTasksKey = `college_tasks_user_${authUser.uid}`;
+          const newSubjectsKey = `college_subjects_zero_${authUser.uid}`;
+          const oldTasksKey = `college_tasks_user_${localId}`;
+          const oldSubjectsKey = `college_subjects_zero_${localId}`;
+          if (localStorage.getItem(newTasksKey) === null && localStorage.getItem(oldTasksKey) !== null) localStorage.setItem(newTasksKey, localStorage.getItem(oldTasksKey));
+          if (localStorage.getItem(newSubjectsKey) === null && localStorage.getItem(oldSubjectsKey) !== null) localStorage.setItem(newSubjectsKey, localStorage.getItem(oldSubjectsKey));
+        } catch (migrationError) { console.warn('Local data migration skipped:', migrationError); }
+        currentUser = { uid: authUser.uid, userId: localId, name: displayName, email };
+        const registryIndex = usersRegistry.findIndex(u => u.uid === authUser.uid || u.userId === localId);
+        const safeProfile = { ...currentUser };
+        if (registryIndex >= 0) usersRegistry[registryIndex] = safeProfile; else usersRegistry.push(safeProfile);
+        saveUsersRegistry();
+        loadSubjects();
+        loadTasks();
+        const localTasks = tasks.slice();
+        if (remote && remote.user) {
+          if (Array.isArray(remote.subjects)) SUBJECTS = remote.subjects;
+          if (Array.isArray(remote.tasks)) {
+            const localImages = new Map(localTasks.filter(t => t.imageData).map(t => [t.id, t.imageData]));
+            tasks = remote.tasks.map(t => ({ ...t, imageData: localImages.get(t.id) || '' }));
+          }
+        }
+        try {
+          localStorage.setItem(getSubjectsStorageKey(), JSON.stringify(SUBJECTS));
+          localStorage.setItem(getTasksStorageKey(), JSON.stringify(tasks));
+        } catch (e) { console.warn('Could not cache account data locally:', e); }
+        pendingFirebaseProfile = null;
+        renderSubjectDropdown(); resetFormState(); updateCurrentUserHeaderUI(); renderAll(); showDashboardView();
+      } finally {
+        cloudWritesPaused = false;
+      }
+      await pushCurrentUserToCloud();
+      renderSavedUsersPills();
+    }
+
+    // Firebase browser configuration. Firebase security is enforced by Authentication + database rules.
+    const firebaseConfig = {
+      apiKey: 'AIzaSyB7UB04x3Jd484Hdf9NKroWtmuuAMeDEeM',
+      authDomain: 'assignment-tracker-d8f2b.firebaseapp.com',
+      databaseURL: 'https://assignment-tracker-d8f2b-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'assignment-tracker-d8f2b',
+      storageBucket: 'assignment-tracker-d8f2b.firebasestorage.app',
+      messagingSenderId: '87885100301',
+      appId: '1:87885100301:web:c577be5d561a71b6a46c44'
+    };
+    if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
     // Starts empty — user will create their own account / User ID!
     let usersRegistry = [];
     let currentUser = null;
 
     function getTasksStorageKey() {
-      const uid = currentUser && currentUser.userId ? currentUser.userId : 'guest';
+      const uid = currentUser && (currentUser.uid || currentUser.userId) ? (currentUser.uid || currentUser.userId) : 'guest';
       return `college_tasks_user_${uid}`;
     }
 
     function getSubjectsStorageKey() {
-      const uid = currentUser && currentUser.userId ? currentUser.userId : 'guest';
+      const uid = currentUser && (currentUser.uid || currentUser.userId) ? (currentUser.uid || currentUser.userId) : 'guest';
       return `college_subjects_zero_${uid}`;
     }
 
@@ -846,14 +946,11 @@
         if (rawUsers !== null) {
           const parsed = JSON.parse(rawUsers);
           if (Array.isArray(parsed)) {
-            usersRegistry = parsed;
+            usersRegistry = parsed.map(({ pin, password, ...safeUser }) => safeUser);
           }
         }
-        const savedActiveId = localStorage.getItem(ACTIVE_USER_KEY);
-        if (savedActiveId) {
-          const found = usersRegistry.find(u => u.userId === savedActiveId);
-          if (found) currentUser = found;
-        }
+        // A locally saved account is never treated as authenticated; Firebase Auth is required.
+        currentUser = null;
       } catch (err) {
         console.warn('User registry load error:', err);
       }
@@ -1013,72 +1110,7 @@
     function renderSavedUsersPills() {
       const box = document.getElementById('savedUsersList');
       if (!box) return;
-      if (usersRegistry.length === 0) {
-        box.innerHTML = '<span class="text-xs text-slate-400 dark:text-slate-500">No accounts saved yet — use Create New Account or Continue with Google above.</span>';
-        return;
-      }
-      box.innerHTML = usersRegistry.map(u => {
-        const isCurrent = currentUser && u.userId === currentUser.userId;
-        return `
-          <button
-            type="button"
-            data-quick-userid="${escapeHtml(u.userId)}"
-            class="px-2.5 py-1 rounded-lg text-xs font-medium border transition flex items-center gap-1 ${
-              isCurrent
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400'
-            }"
-          >
-            <span>${escapeHtml(u.name)} (@${escapeHtml(u.userId)})</span>
-            ${u.pin ? '<span>🔒</span>' : ''}
-          </button>
-        `;
-      }).join('');
-
-      box.querySelectorAll('button[data-quick-userid]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const targetId = btn.getAttribute('data-quick-userid');
-          const found = usersRegistry.find(u => u.userId === targetId);
-          if (!found) return;
-          if (found.pin) {
-            // Pre-fill login form and ask for PIN
-            document.getElementById('tabLoginBtn').click();
-            document.getElementById('loginUserId').value = found.userId;
-            document.getElementById('loginPin').value = '';
-            document.getElementById('loginPin').focus();
-            const errEl = document.getElementById('authErrorMsg');
-            errEl.textContent = `@${found.userId} — please enter your Password/PIN and click Login.`;
-            errEl.classList.remove('hidden');
-          } else {
-            switchActiveUser(found);
-            document.getElementById('authModal').classList.add('hidden');
-            showToast(`Switched to ${found.name} (@${found.userId})`);
-          }
-        });
-      });
-    }
-
-    function showToast(msg) {
-      const box = document.getElementById('toastBox');
-      const text = document.getElementById('toastMessage');
-      text.textContent = msg;
-      box.classList.remove('hidden');
-      clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => {
-        box.classList.add('hidden');
-      }, 2400);
-    }
-
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    function getSubjectStyle(subjectName) {
-      return SUBJECTS.find(s => s.name === subjectName) || SUBJECTS[0] || COLOR_PALETTES.blue;
+      box.innerHTML = '<span class="text-xs text-slate-400 dark:text-slate-500">Use your Firebase email and password to sign in. Local account shortcuts are disabled for security.</span>';
     }
 
     function renderSubjectDropdown() {
@@ -1581,157 +1613,99 @@
         tabSignupBtn.className = 'py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition';
       }
 
-      if (currentUser && currentUser.userId) {
-        loadSubjects();
-        loadTasks();
-        renderSubjectDropdown();
-        updateCurrentUserHeaderUI();
-        renderAll();
-        showDashboardView();
-      } else {
-        renderSubjectDropdown();
-        showLoginGateView();
-        if (usersRegistry.length === 0) {
-          activateSignupTab();
+      renderSubjectDropdown();
+      showLoginGateView();
+      activateLoginTab();
+      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn('Auth persistence:', err));
+      firebase.auth().onAuthStateChanged(async (authUser) => {
+        if (authUser) {
+          try { await activateFirebaseSession(authUser); }
+          catch (err) { console.error(err); showLoginGateView(); }
+        } else {
+          currentUser = null;
+          document.getElementById('appDashboardWrapper').classList.add('hidden');
+          showLoginGateView();
         }
-      }
-
-      document.getElementById('openAuthModalBtn').addEventListener('click', () => {
-        authErrorMsg.classList.add('hidden');
-        document.getElementById('loginUserId').value = currentUser ? currentUser.userId : '';
-        document.getElementById('loginPin').value = '';
-        showLoginGateView();
       });
 
+      document.getElementById('openAuthModalBtn').addEventListener('click', () => showLoginGateView());
       document.getElementById('closeAuthModalBtn').addEventListener('click', () => {
-        if (currentUser && currentUser.userId) {
-          showDashboardView();
-        }
+        if (currentUser && currentUser.uid) showDashboardView();
+      });
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try { await firebase.auth().signOut(); showToast('Logged out successfully'); }
+        catch (err) { showToast('Logout failed: ' + (err.message || 'Please retry')); }
       });
 
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-        currentUser = null;
-        saveUsersRegistry();
-        document.getElementById('loginUserId').value = '';
-        document.getElementById('loginPin').value = '';
-        showLoginGateView();
-        showToast('Logged out successfully');
-      });
-
-      // Continue with Google Flow
+      // Disable the fake Google form: it did not authenticate Google accounts.
       const googleConnectBtn = document.getElementById('googleConnectBtn');
+      if (googleConnectBtn) googleConnectBtn.classList.add('hidden');
       const googleAuthForm = document.getElementById('googleAuthForm');
-      googleConnectBtn.addEventListener('click', () => {
-        googleAuthForm.classList.toggle('hidden');
-        if (!googleAuthForm.classList.contains('hidden')) {
-          document.getElementById('googleUserName').focus();
-        }
-      });
+      if (googleAuthForm) googleAuthForm.classList.add('hidden');
 
-      googleAuthForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const gName = document.getElementById('googleUserName').value.trim();
-        const gEmail = document.getElementById('googleUserEmail').value.trim().toLowerCase();
-        if (!gName || !gEmail || !gEmail.includes('@')) {
-          authErrorMsg.textContent = 'Please enter your full name and a valid Gmail address.';
-          authErrorMsg.classList.remove('hidden');
-          return;
-        }
-        const derivedId = gEmail.split('@')[0].replace(/[^a-z0-9_]/g, '') || ('user_' + Date.now());
-        let userObj = usersRegistry.find(u => u.userId === derivedId);
-        if (!userObj) {
-          userObj = { userId: derivedId, name: gName, email: gEmail, pin: '' };
-          usersRegistry.push(userObj);
-        }
-        googleAuthForm.classList.add('hidden');
-        document.getElementById('googleUserName').value = '';
-        document.getElementById('googleUserEmail').value = '';
-        switchActiveUser(userObj);
-        showToast(`Connected with Google as ${userObj.name} (@${userObj.userId})`);
-      });
-
-      tabLoginBtn.addEventListener('click', () => {
-        loginForm.classList.remove('hidden');
-        signupForm.classList.add('hidden');
-        authErrorMsg.classList.add('hidden');
-        tabLoginBtn.className = 'py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition';
-        tabSignupBtn.className = 'py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition';
-      });
-
-      tabSignupBtn.addEventListener('click', () => {
-        signupForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
-        authErrorMsg.classList.add('hidden');
-        tabSignupBtn.className = 'py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition';
-        tabLoginBtn.className = 'py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition';
-      });
+      tabLoginBtn.addEventListener('click', activateLoginTab);
+      tabSignupBtn.addEventListener('click', activateSignupTab);
 
       loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const rawId = document.getElementById('loginUserId').value.trim().toLowerCase().replace(/\s+/g, '');
-        const pin = document.getElementById('loginPin').value;
-        if (!rawId) {
-          authErrorMsg.textContent = 'Please enter your User ID.';
-          authErrorMsg.classList.remove('hidden');
-          return;
-        }
-
-        // Check Cloud DB first if connected!
-        const cloudData = await fetchUserFromCloud(rawId);
-        if (cloudData && cloudData.user) {
-          if (cloudData.user.pin && cloudData.user.pin !== pin) {
-            authErrorMsg.textContent = 'Incorrect Password / PIN! Please try again.';
-            authErrorMsg.classList.remove('hidden');
-            return;
-          }
+        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+        const password = document.getElementById('loginPin').value;
+        try {
+          if (!email || !password) throw new Error('Enter your email address and password.');
+          await firebase.auth().signInWithEmailAndPassword(email, password);
           authErrorMsg.classList.add('hidden');
-          applyRestoredPayload(cloudData);
-          authModal.classList.add('hidden');
-          showToast(`Loaded @${rawId} account from Cloud!`);
-          return;
-        }
-
-        const existingUser = usersRegistry.find(u => u.userId.toLowerCase() === rawId);
-        if (!existingUser) {
-          authErrorMsg.textContent = `User ID "@${rawId}" not found. Please click "+ Create New Account" to sign up.`;
+        } catch (err) {
+          authErrorMsg.textContent = authErrorText(err);
           authErrorMsg.classList.remove('hidden');
-          return;
         }
-        if (existingUser.pin && existingUser.pin !== pin) {
-          authErrorMsg.textContent = 'Incorrect Password / PIN! Please try again.';
-          authErrorMsg.classList.remove('hidden');
-          return;
-        }
-        authErrorMsg.classList.add('hidden');
-        switchActiveUser(existingUser);
-        authModal.classList.add('hidden');
-        showToast(`Welcome back, ${existingUser.name} (@${existingUser.userId})!`);
       });
 
-      signupForm.addEventListener('submit', (e) => {
+      signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('signupName').value.trim();
-        const rawId = document.getElementById('signupUserId').value.trim().toLowerCase().replace(/\s+/g, '');
-        const pin = document.getElementById('signupPin').value;
-        if (!name || !rawId) {
-          authErrorMsg.textContent = 'Please fill in both your Full Name and a Unique User ID.';
-          authErrorMsg.classList.remove('hidden');
-          return;
+        const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+        const password = document.getElementById('signupPin').value;
+        if (!name || !email || !password) {
+          authErrorMsg.textContent = 'Please fill in your name, email and password.';
+          authErrorMsg.classList.remove('hidden'); return;
         }
-        if (usersRegistry.some(u => u.userId.toLowerCase() === rawId)) {
-          authErrorMsg.textContent = `User ID "@${rawId}" already exists. Please log in or choose another User ID.`;
-          authErrorMsg.classList.remove('hidden');
-          return;
+        if (password.length < 6) {
+          authErrorMsg.textContent = 'Password must be at least 6 characters.';
+          authErrorMsg.classList.remove('hidden'); return;
         }
-        const newUser = { userId: rawId, name, pin };
-        usersRegistry.push(newUser);
-        document.getElementById('signupName').value = '';
-        document.getElementById('signupUserId').value = '';
-        document.getElementById('signupPin').value = '';
-        switchActiveUser(newUser);
-        authModal.classList.add('hidden');
-        showToast(`Account created for ${name} (@${rawId})!`);
+        const userId = email.split('@')[0].replace(/[^a-z0-9_-]/g, '') || ('student_' + Date.now());
+        pendingFirebaseProfile = { name, email, userId };
+        try {
+          const credential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+          await credential.user.updateProfile({ displayName: name });
+          document.getElementById('signupName').value = '';
+          document.getElementById('signupEmail').value = '';
+          document.getElementById('signupPin').value = '';
+          authErrorMsg.classList.add('hidden');
+          await activateFirebaseSession(credential.user);
+          showToast('Account created successfully!');
+        } catch (err) {
+          pendingFirebaseProfile = null;
+          authErrorMsg.textContent = authErrorText(err);
+          authErrorMsg.classList.remove('hidden');
+        }
       });
+
+      function authErrorText(err) {
+        const code = err && err.code;
+        const messages = {
+          'auth/invalid-email': 'Please enter a valid email address.',
+          'auth/user-not-found': 'No account found for this email. Create an account first.',
+          'auth/wrong-password': 'Incorrect email or password.',
+          'auth/invalid-credential': 'Incorrect email or password.',
+          'auth/email-already-in-use': 'This email already has an account. Please log in.',
+          'auth/weak-password': 'Choose a stronger password with at least 6 characters.',
+          'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
+          'auth/network-request-failed': 'Network error. Check your internet connection.',
+          'auth/operation-not-allowed': 'Email/Password sign-in is not enabled in Firebase Authentication.'
+        };
+        return messages[code] || (err && err.message) || 'Authentication failed. Please try again.';
+      }
 
       // Cross-System Sync & Cloud DB Modal Logic
       updateCloudIndicatorUI();
@@ -1753,12 +1727,8 @@
           localStorage.setItem(CLOUD_DB_URL_KEY, rawUrl);
         } catch (e) {}
         updateCloudIndicatorUI();
-        const remote = await fetchUserFromCloud(currentUser.userId);
-        if (remote && remote.user) {
-          applyRestoredPayload(remote);
-        } else {
-          await pushCurrentUserToCloud();
-        }
+        if (!currentUser || !currentUser.uid) { showToast('Please sign in first.'); return; }
+        await pushCurrentUserToCloud();
         showToast('Cloud Database connected & synced!');
       });
 
@@ -1816,15 +1786,11 @@
           showToast('Invalid Sync Code or Backup File!');
           return;
         }
-        const restoredUser = payload.user;
-        const idx = usersRegistry.findIndex(u => u.userId === restoredUser.userId);
-        if (idx >= 0) {
-          usersRegistry[idx] = restoredUser;
-        } else {
-          usersRegistry.push(restoredUser);
+        if (!currentUser || !currentUser.uid) {
+          showToast('Sign in first, then restore data into your own account.');
+          return;
         }
-        currentUser = restoredUser;
-        saveUsersRegistry();
+        const restoredUser = { ...currentUser };
         if (Array.isArray(payload.subjects)) {
           SUBJECTS = payload.subjects;
           saveSubjects();
