@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>College Assignment & Homework Tracker | Made by Piyush Sahu</title>
+  <title>College Assignment & Homework Tracker</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -49,10 +49,6 @@
             <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
               College Assignment Tracker
             </h1>
-            <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-xs">
-              <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-              Made by Piyush Sahu
-            </span>
             <span id="liveClockBadge" class="hidden sm:inline-block text-[11px] font-medium text-slate-400 dark:text-slate-500"></span>
           </div>
           <!-- Minimal Inline Stats -->
@@ -84,6 +80,9 @@
         <button id="openSyncModalBtn" type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50/70 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1" title="Setup Online Cloud Database or Sync Code">
           <span id="cloudStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
           <span>⇄ Sync ID</span>
+        </button>
+        <button id="openAiCoachModalBtn" type="button" class="text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/70 hover:bg-purple-100 dark:hover:bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5 shadow-2xs" title="Analyze tasks and notes for an intelligent study roadmap">
+          <span>✨ AI Study Coach</span>
         </button>
         <button id="toggleTimerModalBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
           ⏱ Focus Timer
@@ -191,7 +190,7 @@
           <h2 id="formHeading" class="text-sm font-bold text-slate-800 dark:text-slate-100">
             Add New Assignment
           </h2>
-          <span id="workspaceOwnerLabel" class="text-[11px] font-medium text-slate-400 dark:text-slate-500">• Piyush Sahu's Workspace</span>
+          <span id="workspaceOwnerLabel" class="text-[11px] font-medium text-slate-400 dark:text-slate-500">• Student Workspace</span>
         </div>
         <button id="cancelEditBtn" type="button" class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg transition">
           Cancel Edit
@@ -302,6 +301,9 @@
         <div class="flex items-center gap-2">
           <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">Assignments</h2>
           <span id="filteredCountBadge" class="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full">0</span>
+          <button type="button" id="quickCoachBtn" class="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 px-2 py-0.5 rounded-md border border-purple-200/80 dark:border-purple-800/80 transition flex items-center gap-1" title="Get instant study plan">
+            <span>✨ Study Plan</span>
+          </button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -361,6 +363,89 @@
   </div><!-- /#appDashboardWrapper -->
 
   <!-- Minimal Focus Timer Modal (Tucked Away to Keep Main UI Clean) -->
+    <!-- Smart AI Study Coach & Task Guide Modal -->
+  <div id="aiCoachModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      
+      <!-- Modal Top Bar -->
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+            ✨
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">
+                AI Study Coach &amp; Task Guide
+              </h3>
+              <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                Live Insights
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Personalized study roadmap analyzing your active assignments, deadlines, and notes
+            </p>
+          </div>
+        </div>
+        <button type="button" id="closeAiCoachModalBtn" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm font-bold px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">✕</button>
+      </div>
+
+      <!-- Coach Content Output Box -->
+      <div id="aiCoachOutputContainer" class="space-y-4">
+        <!-- Rendered dynamically by generateSmartStudyRoadmap() -->
+      </div>
+
+      <!-- Optional Gemini API Key Box for Real Generative AI -->
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        <div class="flex items-center justify-between cursor-pointer py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 transition" id="toggleAiKeyPanel">
+          <span class="flex items-center gap-1.5">
+            <span>🤖 Connect Google Gemini AI for Deep Explanations</span>
+            <span class="text-[10px] text-slate-400 font-normal">(Optional Free Key)</span>
+          </span>
+          <span id="aiKeyChevron" class="text-xs text-slate-400">▾</span>
+        </div>
+
+        <div id="aiKeyPanel" class="hidden p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5">
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Enter your free <strong>Google AI Studio (Gemini) API Key</strong> to ask AI questions about your notes, get full syllabus breakdowns, or receive custom motivational coaching:
+          </p>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input
+              type="password"
+              id="geminiApiKeyInput"
+              placeholder="Paste Gemini API Key (AIzaSy...)"
+              class="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500"
+            />
+            <button
+              type="button"
+              id="saveAndRunGeminiBtn"
+              class="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition shrink-0 flex items-center justify-center gap-1.5"
+            >
+              <span>Ask Gemini AI →</span>
+            </button>
+          </div>
+          <div id="geminiAiLoading" class="hidden text-xs text-purple-600 dark:text-purple-400 font-medium animate-pulse">
+            Analyzing assignments with Gemini AI...
+          </div>
+          <div id="geminiAiResponseBox" class="hidden p-3 rounded-xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 text-xs text-slate-800 dark:text-slate-200 space-y-2 leading-relaxed"></div>
+        </div>
+      </div>
+
+      <!-- Modal Bottom Actions -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="copyStudyPlanBtn" class="text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+            <span>📋 Copy Plan</span>
+          </button>
+          <button type="button" id="startTopTaskTimerBtn" class="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs">
+            <span>⏱ Start Focus Timer on #1 Task</span>
+          </button>
+        </div>
+        <span class="text-[11px] text-slate-400 dark:text-slate-500">Auto-updated with your tasks</span>
+      </div>
+    </div>
+  </div>
+
   <div id="timerModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-xs w-full shadow-xl">
       <div class="flex items-center justify-between mb-3">
@@ -417,10 +502,6 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-          <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-          Made by Piyush Sahu
-        </span>
         <button type="button" id="closeAuthModalBtn" class="hidden text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-lg hover:bg-slate-100">
           Back to Dashboard ✕
         </button>
@@ -434,13 +515,13 @@
       <div class="lg:col-span-7 space-y-6">
         <div class="space-y-3">
           <div class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/60 px-3 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900">
-            <span>🎓 Student Productivity Platform · Developed by Piyush Sahu</span>
+            <span>🎓 Student Productivity Platform</span>
           </div>
           <h2 class="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
             Manage Your College Homework &amp; Assignments Smartly.
           </h2>
           <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Built by <strong>Piyush Sahu</strong> for college students — create your personal account to organize subject-wise assignments, practical files, study notes, and submission deadlines in one minimal workspace.
+            Designed for college students — create your personal account to organize subject-wise assignments, practical files, study notes, and submission deadlines in one minimal workspace.
           </p>
         </div>
 
@@ -515,7 +596,7 @@
                 <path fill="#FBBC05" d="M5.3 14.8c-.2-.8-.4-1.8-.4-2.8s.2-2 .4-2.8L1.6 6.4C.6 8.4 0 10.6 0 12s.6 3.6 1.6 5.6l3.7-2.8z"/>
                 <path fill="#34A853" d="M12 23c3 0 5.5-1 7.4-2.7l-3.7-2.9c-1 .7-2.3 1.1-3.7 1.1-3.1 0-5.8-2.1-6.7-5L1.6 16.3C3.5 20.4 7.4 23 12 23z"/>
               </svg>
-              <span>Google login not enabled</span>
+              <span>Continue with Google</span>
             </button>
 
             <!-- Inline Google Account Connect Box (Toggles when clicking Google login not enabled) -->
@@ -555,10 +636,10 @@
           <!-- Mode Switch Tabs -->
           <div class="grid grid-cols-2 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
             <button type="button" id="tabLoginBtn" class="py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition">
-              Login with Email
+              Login Existing ID
             </button>
             <button type="button" id="tabSignupBtn" class="py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition">
-              + Create Account
+              + Create New Account
             </button>
           </div>
 
@@ -566,6 +647,7 @@
 
           <!-- Login Form -->
           <form id="loginForm" class="space-y-3" novalidate>
+            <input type="hidden" id="loginUserId" value="" />
             <div>
               <label for="loginEmail" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
               <input
@@ -593,6 +675,7 @@
 
           <!-- Sign Up Form -->
           <form id="signupForm" class="hidden space-y-3" novalidate>
+            <input type="hidden" id="signupUserId" value="" />
             <div>
               <label for="signupName" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name <span class="text-rose-500">*</span></label>
               <input
@@ -1596,8 +1679,512 @@
       document.getElementById('timerStartPauseBtn').textContent = timerRunning ? 'Pause Timer' : 'Start Focus';
     }
 
+    const GEMINI_API_KEY_STORAGE = 'college_student_gemini_api_key_v1';
+    let cachedStudyPlanText = '';
+
+    function getTaskUrgencyScore(task, today) {
+      const priorityWeights = { High: 100, Medium: 50, Low: 20 };
+      const pWeight = priorityWeights[task.priority] || 20;
+      if (!task.dueDate) return pWeight;
+      const parts = task.dueDate.split('-');
+      if (parts.length !== 3) return pWeight;
+      const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+      // Closer deadlines have higher urgency
+      return pWeight - (diffDays * 12);
+    }
+
+    function analyzeTaskContext(task) {
+      const title = (task.title || '').toLowerCase();
+      const notes = (task.notes || '').toLowerCase();
+      const subject = (task.subject || '').toLowerCase();
+      const text = `${title} ${notes} ${subject}`;
+
+      // 1. Programming & Coding (C, C++, Java, Python, Loops, Variables, DSA, etc.)
+      if (text.includes('c language') || text.includes('c++') || text.includes('java') || text.includes('python') || text.includes('code') || text.includes('coding') || text.includes('program') || text.includes('loop') || text.includes('variable') || text.includes('pointer') || text.includes('array') || text.includes('function') || text.includes('syntax') || text.includes('dsa') || text.includes('structure')) {
+        if (text.includes('loop') || text.includes('variable')) {
+          return {
+            tag: '💻 C / Programming • Loops & Variables Mastery',
+            badgeBg: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+            steps: [
+              'Review syntax & differences of for, while, and do-while loops + variable scope (local vs global).',
+              'Trace a loop dry-run table on paper: note down loop counter values (i, j) step-by-step for 3 iterations.',
+              'Type and compile 2 practical programs (e.g., star pattern, factorial, or prime number check) in your compiler.'
+            ]
+          };
+        }
+        if (text.includes('pointer') || text.includes('array')) {
+          return {
+            tag: '💻 Programming • Pointers & Arrays Drill',
+            badgeBg: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+            steps: [
+              'Draw memory blocks on paper showing array indices vs memory addresses (*ptr vs &var).',
+              'Review pointer arithmetic rules and practice passing arrays to functions.',
+              'Compile 1 small test program (e.g., array reversal or linear search) to verify logic.'
+            ]
+          };
+        }
+        return {
+          tag: '💻 Coding & Algorithm Practice',
+          badgeBg: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+          steps: [
+            'Write down the logic / flowchart on rough paper before opening the code editor.',
+            'Type code and test corner cases (zero, negative numbers, or empty inputs).',
+            'Comment key algorithm lines and save clean output screenshots for your records.'
+          ]
+        };
+      }
+
+      // 2. PC Software, Excel, Shortcuts, Office tools
+      if (text.includes('excel') || text.includes('shortcut') || text.includes('key') || text.includes('sheet') || text.includes('pc software') || text.includes('word') || text.includes('powerpoint') || text.includes('ppt') || text.includes('office')) {
+        if (text.includes('shortcut') || text.includes('key') || text.includes('excel')) {
+          return {
+            tag: '📊 PC Software • Hands-On Excel & Shortcut Drill',
+            badgeBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+            steps: [
+              'Open MS Excel hands-on — do not just memorize shortcuts passively from notes.',
+              'Practice core navigation: Ctrl+Arrow (jump boundaries), Ctrl+Shift+L (filters), F4 (lock cells/repeat), and Alt+= (AutoSum).',
+              'Self-Test Challenge: Build a 5-column mock marksheet table without touching your mouse for 10 minutes.'
+            ]
+          };
+        }
+        return {
+          tag: '🖥️ PC Software & Office Practical',
+          badgeBg: 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+          steps: [
+            'Open the required application and replicate the target document / sheet structure.',
+            'Apply proper table formatting, headers, borders, and test basic formulas / transitions.',
+            'Save with a standard naming convention (.xlsx / .docx) and backup your work.'
+          ]
+        };
+      }
+
+      // 3. Mathematics, Numericals, Physics, Calculations
+      if (text.includes('math') || text.includes('numerical') || text.includes('physics') || text.includes('stat') || text.includes('account') || text.includes('formula') || text.includes('calculate') || text.includes('theorem')) {
+        return {
+          tag: '📐 Problem Solving & Numericals Drill',
+          badgeBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+          steps: [
+            'Write down all relevant formulas on a clean single-page formula sheet first.',
+            'Review 2 solved textbook examples step-by-step to check standard notation and SI units.',
+            'Solve 3 exercise questions independently without looking at the answer key, then cross-verify.'
+          ]
+        };
+      }
+
+      // 4. Lab, Practical, Record File
+      if (text.includes('lab') || text.includes('practical') || text.includes('record') || text.includes('file') || text.includes('experiment')) {
+        return {
+          tag: '🧪 Practical & Lab File Preparation',
+          badgeBg: 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+          steps: [
+            'Write down Aim, Apparatus / Tools, and theoretical concept clearly in your file.',
+            'Draw neat diagrams / flowcharts and attach verified test outputs or observation tables.',
+            'Prepare 3 potential viva questions based on the objective of this experiment.'
+          ]
+        };
+      }
+
+      // 5. Revision, Active Recall, Exam / Quiz / Test Prep
+      if (text.includes('revision') || text.includes('revise') || text.includes('yaad') || text.includes('padhna') || text.includes('exam') || text.includes('test') || text.includes('viva') || text.includes('quiz')) {
+        return {
+          tag: '📝 Active Recall Revision Strategy',
+          badgeBg: 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+          steps: [
+            'Quick-scan: Spend 10-15 minutes reading key headings, diagrams, and highlighted definitions.',
+            'Active Recall: Close the book completely and write the top 5 questions / concepts on rough paper from memory.',
+            'Re-check notes only for points you missed, and re-test yourself on those weak spots.'
+          ]
+        };
+      }
+
+      // 6. Project, Presentation, Seminar, Report
+      if (text.includes('project') || text.includes('presentation') || text.includes('seminar') || text.includes('report') || text.includes('slide')) {
+        return {
+          tag: '📑 Project & Presentation Milestone',
+          badgeBg: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+          steps: [
+            'Structure content into 3 clear blocks: Introduction, Core Findings, and Summary.',
+            'Use clean bullet points instead of long paragraphs, adding 1 diagram or screenshot.',
+            'Do a quick 3-minute verbal mock presentation out loud to test timing and flow.'
+          ]
+        };
+      }
+
+      // 7. Dynamic Smart Topic Fallback
+      return {
+        tag: `🎯 Focused Study: ${escapeHtml(task.title)}`,
+        badgeBg: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+        steps: [
+          `Review core class notes and syllabus objectives for ${escapeHtml(task.subject || 'this subject')}.`,
+          'Start a 25-minute Pomodoro study block to draft your answers or complete the assignment.',
+          'Review final work and check off key requirements before marking as Completed.'
+        ]
+      };
+    }
+
+    function generateSmartStudyRoadmap() {
+      const container = document.getElementById('aiCoachOutputContainer');
+      const startTimerBtn = document.getElementById('startTopTaskTimerBtn');
+      if (!container) return;
+
+      const pendingTasks = tasks.filter(t => t.status === 'Pending');
+      const completedTasks = tasks.filter(t => t.status === 'Completed');
+
+      if (pendingTasks.length === 0) {
+        cachedStudyPlanText = 'All caught up! You have 0 pending assignments.';
+        container.innerHTML = `
+          <div class="p-6 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+            <span class="text-3xl">🎉</span>
+            <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200">Zero Pending Assignments!</h4>
+            <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+              Awesome work! All assignments in your student workspace are completed (${completedTasks.length} done). Use this free time to take a break or add your next homework above.
+            </p>
+          </div>
+        `;
+        if (startTimerBtn) startTimerBtn.classList.add('hidden');
+        return;
+      }
+
+      if (startTimerBtn) startTimerBtn.classList.remove('hidden');
+
+      const today = new Date('2026-10-19T00:00:00'); // Consistent reference point with system
+      
+      // Calculate Urgency & Sort
+      const scoredTasks = pendingTasks.map(t => {
+        const parts = (t.dueDate || '').split('-');
+        let diffDays = 999;
+        if (parts.length === 3) {
+          const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+        }
+        const urgencyScore = getTaskUrgencyScore(t, today);
+        return { ...t, diffDays, urgencyScore };
+      }).sort((a, b) => b.urgencyScore - a.urgencyScore);
+
+      const overdueCount = scoredTasks.filter(t => t.diffDays < 0).length;
+      const dueTodayCount = scoredTasks.filter(t => t.diffDays === 0).length;
+      const dueNext3DaysCount = scoredTasks.filter(t => t.diffDays > 0 && t.diffDays <= 3).length;
+      const highPriorityCount = scoredTasks.filter(t => t.priority === 'High').length;
+
+      // Extract unique top subjects for personalized coach advice
+      const topSubjectNames = [...new Set(scoredTasks.slice(0, 3).map(t => t.subject).filter(Boolean))];
+      const subjectsMention = topSubjectNames.length > 0 ? ` focused on <strong>${escapeHtml(topSubjectNames.join(' & '))}</strong>` : '';
+
+      // Status Assessment
+      let statusColor = 'border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/50 dark:bg-indigo-950/30';
+      let statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">Balanced Pace</span>';
+      let statusMessage = `You have <strong>${pendingTasks.length} active assignments</strong>${subjectsMention}. Follow the targeted action steps below to finish smoothly.`;
+
+      if (overdueCount > 0 || dueTodayCount > 0) {
+        statusColor = 'border-rose-200 dark:border-rose-800/80 bg-rose-50/50 dark:bg-rose-950/30';
+        statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300">Action Required Today</span>';
+        statusMessage = `Attention: You have <strong>${overdueCount + dueTodayCount} assignment(s)</strong> due immediately${subjectsMention}. Start with Step 1 right away!`;
+      } else if (highPriorityCount >= 1 || dueNext3DaysCount >= 2) {
+        statusColor = 'border-amber-200 dark:border-amber-800/80 bg-amber-50/50 dark:bg-amber-950/30';
+        statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">Priority Study Time</span>';
+        statusMessage = `You have high-priority work due soon${subjectsMention}. Complete the top sequence in 25-minute Pomodoro sessions.`;
+      }
+
+      // Build Top Tasks Breakdown
+      let sequenceHtml = '';
+      let planTextLines = ['=== Smart Study Action Plan ===', `Pending Assignments: ${pendingTasks.length}`, ''];
+
+      scoredTasks.slice(0, 4).forEach((task, idx) => {
+        const subjStyle = getSubjectStyle(task.subject);
+        let timeRecommend = '25 mins Focus';
+        if (task.priority === 'High' || task.diffDays <= 1) timeRecommend = '45-50 mins (2 Pomodoros)';
+        else if (task.priority === 'Low') timeRecommend = '15-20 mins Quick Finish';
+
+        let deadlineBadge = '';
+        if (task.diffDays < 0) {
+          deadlineBadge = `<span class="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 rounded-md">Overdue (${Math.abs(task.diffDays)}d)</span>`;
+        } else if (task.diffDays === 0) {
+          deadlineBadge = `<span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md">Due Today!</span>`;
+        } else {
+          deadlineBadge = `<span class="text-[11px] text-slate-500 dark:text-slate-400">Due in ${task.diffDays}d (${formatReadableDate(task.dueDate)})</span>`;
+        }
+
+        // Deep Domain Analysis
+        const analysis = analyzeTaskContext(task);
+
+        planTextLines.push(`Step ${idx + 1}: [${task.priority}] ${task.title} (${task.subject})`);
+        planTextLines.push(`  - Topic: ${analysis.tag}`);
+        planTextLines.push(`  - Deadline: Due ${formatReadableDate(task.dueDate)}`);
+        planTextLines.push(`  - Suggested Time: ${timeRecommend}`);
+        if (task.notes) planTextLines.push(`  - Notes: "${task.notes}"`);
+        planTextLines.push('  - Action Plan:');
+        analysis.steps.forEach((s, sIdx) => planTextLines.push(`     ${sIdx + 1}. ${s}`));
+        planTextLines.push('');
+
+        const stepsHtml = analysis.steps.map((step, sIdx) => `
+          <div class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            <span class="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+              ${sIdx + 1}
+            </span>
+            <span>${escapeHtml(step)}</span>
+          </div>
+        `).join('');
+
+        sequenceHtml += `
+          <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-3">
+            <!-- Header Row -->
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                  ${idx + 1}
+                </span>
+                <span class="text-sm font-bold text-slate-900 dark:text-white">
+                  ${escapeHtml(task.title)}
+                </span>
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded-md border ${subjStyle.badgeBg} ${subjStyle.badgeText} ${subjStyle.badgeBorder}">
+                  ${escapeHtml(task.subject)}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                ${getPriorityBadge(task.priority)}
+                ${deadlineBadge}
+              </div>
+            </div>
+
+            <!-- Context Badge & Recommended Session -->
+            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+              <span class="font-semibold px-2 py-0.5 rounded-md border ${analysis.badgeBg}">
+                ${analysis.tag}
+              </span>
+              <span class="text-slate-500 dark:text-slate-400">
+                ⏱ Recommended: <strong class="text-purple-600 dark:text-purple-400">${timeRecommend}</strong>
+              </span>
+            </div>
+
+            ${task.notes ? `
+              <div class="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+                <strong>Your Notes:</strong> "${escapeHtml(task.notes)}"
+              </div>
+            ` : ''}
+
+            <!-- Smart 3-Step Action Plan -->
+            <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Targeted Action Steps:
+              </p>
+              <div class="space-y-1.5">
+                ${stepsHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      cachedStudyPlanText = planTextLines.join('\n');
+
+      container.innerHTML = `
+        <!-- Workload Status Header Card -->
+        <div class="p-4 rounded-xl border ${statusColor} space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-900 dark:text-white">Today's Study Overview</span>
+            ${statusBadge}
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">${statusMessage}</p>
+          <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+            <span>Pending: <strong>${pendingTasks.length}</strong></span>
+            <span>·</span>
+            <span>High Priority: <strong>${highPriorityCount}</strong></span>
+            <span>·</span>
+            <span>Due Soon: <strong>${dueTodayCount + dueNext3DaysCount}</strong></span>
+          </div>
+        </div>
+
+        <!-- Prioritized Sequence -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Recommended Focus Sequence:
+            </h4>
+            <span class="text-[11px] text-slate-400">Showing top ${Math.min(4, scoredTasks.length)} tasks</span>
+          </div>
+          <div class="space-y-3">
+            ${sequenceHtml}
+          </div>
+        </div>
+
+        <!-- Strategy Tip Box -->
+        <div class="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/80 flex items-start gap-2.5">
+          <span class="text-base shrink-0">💡</span>
+          <div class="text-xs text-purple-950 dark:text-purple-200 leading-relaxed">
+            <strong>Study Tip from Coach:</strong> Don't try to study everything at once. Pick <strong>Step 1</strong> above, click <strong>"Start Focus Timer"</strong>, and study with full concentration for 25 minutes!
+          </div>
+        </div>
+      `;
+    }
+
+    async function callGeminiAiMentor() {
+      const apiKeyInput = document.getElementById('geminiApiKeyInput');
+      const responseBox = document.getElementById('geminiAiResponseBox');
+      const loadingEl = document.getElementById('geminiAiLoading');
+      const apiKey = apiKeyInput.value.trim();
+
+      if (!apiKey) {
+        showToast('Please enter your Gemini API Key first');
+        return;
+      }
+
+      try {
+        localStorage.setItem(GEMINI_API_KEY_STORAGE, apiKey);
+      } catch (e) {}
+
+      const pending = tasks.filter(t => t.status === 'Pending').map(t => ({
+        title: t.title,
+        subject: t.subject,
+        priority: t.priority,
+        dueDate: t.dueDate,
+        notes: t.notes || ''
+      }));
+
+      if (pending.length === 0) {
+        showToast('No pending assignments to analyze!');
+        return;
+      }
+
+      loadingEl.classList.remove('hidden');
+      responseBox.classList.add('hidden');
+
+      const promptText = `
+You are a warm, highly effective academic study coach and mentor for a college student named ${currentUser?.name || 'Student'}.
+Analyze these active college assignments, deadlines, and notes:
+${JSON.stringify(pending, null, 2)}
+
+Provide a concise, motivating, and highly practical response with:
+1. Daily Priority Plan: Exactly which order to do these assignments in and why.
+2. Notes Analysis: Actionable guidance on what to write or solve based on their specific notes.
+3. Realistic Pomodoro Time Breakdown: How many 25-minute study sessions to dedicate to each subject.
+
+Keep the advice clean, formatted with bullet points and bold headers. Do not use generic filler.
+`;
+
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`Gemini API returned status ${res.status}`);
+        }
+
+        const data = await res.json();
+        const rawAiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+        
+        // Simple Markdown conversion to HTML
+        let formattedHtml = escapeHtml(rawAiText)
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/^### (.*$)/gim, '<h5 class="font-bold text-slate-900 dark:text-white mt-2">$1</h5>')
+          .replace(/^## (.*$)/gim, '<h4 class="font-bold text-slate-900 dark:text-white mt-2.5">$1</h4>')
+          .replace(/^# (.*$)/gim, '<h3 class="font-bold text-slate-900 dark:text-white mt-3">$1</h3>')
+          .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+          .replace(/^\- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+          .replace(/\n/g, '<br/>');
+
+        responseBox.innerHTML = `
+          <div class="flex items-center justify-between border-b border-purple-200 dark:border-purple-800 pb-2 mb-2">
+            <span class="font-bold text-purple-700 dark:text-purple-300">✨ Gemini AI Mentor Response:</span>
+            <span class="text-[10px] text-slate-400">Live Gemini Flash</span>
+          </div>
+          <div>${formattedHtml}</div>
+        `;
+        responseBox.classList.remove('hidden');
+        showToast('AI analysis generated successfully!');
+      } catch (err) {
+        console.error('Gemini error:', err);
+        responseBox.innerHTML = `<span class="text-rose-600 font-semibold">Error connecting to Gemini API: ${escapeHtml(err.message || 'Check your API Key.')}</span>`;
+        responseBox.classList.remove('hidden');
+      } finally {
+        loadingEl.classList.add('hidden');
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       loadUsersRegistry();
+
+      // AI Study Coach Modal Listeners
+      const aiCoachModal = document.getElementById('aiCoachModal');
+      const openAiCoachModalBtn = document.getElementById('openAiCoachModalBtn');
+      const quickCoachBtn = document.getElementById('quickCoachBtn');
+      const closeAiCoachModalBtn = document.getElementById('closeAiCoachModalBtn');
+      const toggleAiKeyPanel = document.getElementById('toggleAiKeyPanel');
+      const aiKeyPanel = document.getElementById('aiKeyPanel');
+      const aiKeyChevron = document.getElementById('aiKeyChevron');
+      const saveAndRunGeminiBtn = document.getElementById('saveAndRunGeminiBtn');
+      const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+      const copyStudyPlanBtn = document.getElementById('copyStudyPlanBtn');
+      const startTopTaskTimerBtn = document.getElementById('startTopTaskTimerBtn');
+
+      // Load saved Gemini API key if present
+      try {
+        const savedKey = localStorage.getItem(GEMINI_API_KEY_STORAGE);
+        if (savedKey && geminiApiKeyInput) geminiApiKeyInput.value = savedKey;
+      } catch (e) {}
+
+      function openCoachModal() {
+        generateSmartStudyRoadmap();
+        aiCoachModal.classList.remove('hidden');
+      }
+
+      if (openAiCoachModalBtn) openAiCoachModalBtn.addEventListener('click', openCoachModal);
+      if (quickCoachBtn) quickCoachBtn.addEventListener('click', openCoachModal);
+      if (closeAiCoachModalBtn) closeAiCoachModalBtn.addEventListener('click', () => {
+        aiCoachModal.classList.add('hidden');
+      });
+      if (aiCoachModal) aiCoachModal.addEventListener('click', (e) => {
+        if (e.target === aiCoachModal) aiCoachModal.classList.add('hidden');
+      });
+
+      if (toggleAiKeyPanel) {
+        toggleAiKeyPanel.addEventListener('click', () => {
+          aiKeyPanel.classList.toggle('hidden');
+          aiKeyChevron.textContent = aiKeyPanel.classList.contains('hidden') ? '▾' : '▴';
+        });
+      }
+
+      if (saveAndRunGeminiBtn) {
+        saveAndRunGeminiBtn.addEventListener('click', callGeminiAiMentor);
+      }
+
+      if (copyStudyPlanBtn) {
+        copyStudyPlanBtn.addEventListener('click', () => {
+          if (!cachedStudyPlanText) {
+            showToast('No study plan to copy!');
+            return;
+          }
+          const tempTextArea = document.createElement('textarea');
+          tempTextArea.value = cachedStudyPlanText;
+          document.body.appendChild(tempTextArea);
+          tempTextArea.select();
+          try {
+            document.execCommand('copy');
+            showToast('Study Action Plan copied to clipboard!');
+          } catch (e) {
+            showToast('Could not copy automatically');
+          }
+          document.body.removeChild(tempTextArea);
+        });
+      }
+
+      if (startTopTaskTimerBtn) {
+        startTopTaskTimerBtn.addEventListener('click', () => {
+          aiCoachModal.classList.add('hidden');
+          document.getElementById('timerModal').classList.remove('hidden');
+          // Start 25m Focus session
+          document.getElementById('modeFocusBtn').click();
+          showToast('25m Study Focus Timer ready for your top assignment!');
+        });
+      }
+
       document.getElementById('taskDueDate').value = '2026-10-22';
 
       // Auth Page (Login / Sign Up / Google Connect)
