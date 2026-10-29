@@ -1,401 +1,302 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="College Assignment & Homework Tracker - subject-wise assignments, deadlines, focus timer and cloud sync for students." />
   <title>College Assignment & Homework Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9D%3C/text%3E%3C/svg%3E" />
+  <script>
+    // Theme: dark by default (first visit), then remember the user's choice. Runs before paint to avoid a flash.
+    (function () {
+      try {
+        var saved = localStorage.getItem('college_theme_v1');
+        if (saved === 'light') document.documentElement.classList.remove('dark');
+        else document.documentElement.classList.add('dark');
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          }
-        }
-      }
+      theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
     };
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
+    body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
   </style>
 </head>
 <body class="min-h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16 transition-colors duration-200">
 
-  <!-- Main Home Page Wrapper (Hidden until user logs in) -->
+  <!-- Startup loading screen (shown until Firebase tells us if someone is signed in) -->
+  <div id="authLoading" class="fixed inset-0 z-[60] flex items-center justify-center bg-[#f8fafc] dark:bg-slate-950">
+    <div class="text-center space-y-2">
+      <div class="w-8 h-8 mx-auto rounded-full border-2 border-slate-300 dark:border-slate-700 border-t-indigo-600 animate-spin"></div>
+      <p class="text-xs text-slate-500 dark:text-slate-400">Loading your workspace...</p>
+    </div>
+  </div>
+
+  <!-- Main Dashboard (hidden until user logs in) -->
   <div id="appDashboardWrapper" class="hidden">
 
-  <!-- Minimal Top Navbar -->
-  <header class="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <!-- Brand / Heading -->
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shrink-0">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-        </div>
-        <div>
-          <div class="flex flex-wrap items-center gap-2.5">
-            <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-              College Assignment Tracker
-            </h1>
-            <span id="liveClockBadge" class="hidden sm:inline-block text-[11px] font-medium text-slate-400 dark:text-slate-500"></span>
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
           </div>
-          <!-- Minimal Inline Stats -->
-          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            <span>Total: <strong id="statTotal" class="text-slate-800 dark:text-slate-200">0</strong></span>
-            <span>·</span>
-            <span>Pending: <strong id="statPending" class="text-amber-600 dark:text-amber-400">0</strong></span>
-            <span>·</span>
-            <span>Done: <strong id="statCompleted" class="text-emerald-600 dark:text-emerald-400">0</strong></span>
-            <span>·</span>
-            <span>High Priority: <strong id="statHighPriority" class="text-rose-600 dark:text-rose-400">0</strong></span>
-            <span>·</span>
-            <span id="statProgressPct" class="font-semibold text-indigo-600 dark:text-indigo-400">0%</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Minimal Action Buttons -->
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Logged-in User Pill & Switch/Login Button -->
-        <button id="openAuthModalBtn" type="button" class="text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1.5" title="Switch Student Account or Create New ID">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span id="currentUserBadgeText">Student</span>
-          <span class="text-[10px] opacity-75">▾ Switch / Login</span>
-        </button>
-        <button id="logoutBtn" type="button" class="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800/70 transition" title="Logout and return to Login Page">
-          Logout
-        </button>
-        <button id="openSyncModalBtn" type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50/70 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1" title="Setup Online Cloud Database or Sync Code">
-          <span id="cloudStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-          <span>⇄ Sync ID</span>
-        </button>
-        <button id="openAiCoachModalBtn" type="button" class="text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/70 hover:bg-purple-100 dark:hover:bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5 shadow-2xs" title="Analyze tasks and notes for an intelligent study roadmap">
-          <span>✨ AI Study Coach</span>
-        </button>
-        <button id="toggleTimerModalBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
-          ⏱ Focus Timer
-        </button>
-        <button id="exportCsvBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
-          Export CSV
-        </button>
-        <button id="themeToggleBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
-          <span id="themeToggleText">Light Mode</span>
-        </button>
-        <button id="clearAllTasksBtn" type="button" class="text-xs font-medium text-rose-500 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 px-2.5 py-1.5 rounded-lg transition" title="Clear all assignments in one click">
-          Clear All
-        </button>
-      </div>
-    </div>
-    <!-- Subtle 2px Progress Line -->
-    <div class="w-full bg-slate-100 dark:bg-slate-800 h-0.5 overflow-hidden">
-      <div id="statProgressBar" class="bg-indigo-600 dark:bg-indigo-500 h-full transition-all duration-300" style="width: 0%"></div>
-    </div>
-  </header>
-
-  <!-- Main Minimal Container -->
-  <main class="max-w-4xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
-
-    <!-- 1. Minimal Subjects Bar + Edit/Remove Drawer -->
-    <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm">
-      <div class="flex items-center justify-between gap-2 mb-3">
-        <div class="flex items-center gap-2">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Subjects
-          </h2>
-          <span id="activeSubjectHint" class="text-xs text-slate-500 dark:text-slate-400">Showing: All Subjects</span>
-        </div>
-        <button
-          id="toggleManageSubjectsBtn"
-          type="button"
-          class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2.5 py-1 rounded-lg transition flex items-center gap-1"
-        >
-          <span>✎ Add / Edit / Remove Subjects</span>
-        </button>
-      </div>
-
-      <!-- Subject Filter Pills -->
-      <div id="subjectPillsContainer" class="flex flex-wrap gap-1.5">
-        <!-- Populated by JS -->
-      </div>
-
-      <!-- Collapsible Subject Manager (Add, Rename/Edit, or Remove ANY Subject) -->
-      <div id="manageSubjectsPanel" class="hidden mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
-        <form id="addSubjectForm" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <input type="hidden" id="editingSubjectOldName" value="" />
-          <input
-            type="text"
-            id="newSubjectName"
-            placeholder="Enter subject name (e.g., Mathematics, Data Structures)..."
-            class="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white focus:border-indigo-500 outline-none"
-          />
-          <div class="flex items-center gap-2">
-            <select
-              id="newSubjectColor"
-              aria-label="Subject Color"
-              class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
-            >
-              <option value="blue">Blue</option>
-              <option value="purple">Purple</option>
-              <option value="cyan">Cyan</option>
-              <option value="amber">Amber</option>
-              <option value="emerald">Green</option>
-              <option value="rose">Rose</option>
-              <option value="teal">Teal</option>
-            </select>
-            <button
-              type="submit"
-              id="subjectSubmitBtn"
-              class="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition shrink-0"
-            >
-              + Add Subject
-            </button>
-            <button
-              type="button"
-              id="cancelSubjectEditBtn"
-              class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-
-        <!-- List of All Subjects with Edit & Remove buttons -->
-        <div>
-          <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-2">
-            Click <strong>Edit</strong> to rename or change color, or <strong>Remove</strong> to delete a subject:
-          </p>
-          <div id="subjectManageList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            <!-- Populated dynamically by JS -->
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2. Minimal Assignment Add Karne Ka Dabba -->
-    <section id="formSection" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div class="flex items-center gap-2">
-          <h2 id="formHeading" class="text-sm font-bold text-slate-800 dark:text-slate-100">
-            Add New Assignment
-          </h2>
-          <span id="workspaceOwnerLabel" class="text-[11px] font-medium text-slate-400 dark:text-slate-500">• Student Workspace</span>
-        </div>
-        <button id="cancelEditBtn" type="button" class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg transition">
-          Cancel Edit
-        </button>
-      </div>
-
-      <form id="assignmentForm" class="space-y-3" novalidate>
-        <input type="hidden" id="editTaskId" value="" />
-
-        <!-- Primary Row: Title, Subject, Due Date -->
-        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-          <div class="sm:col-span-6">
-            <input
-              type="text"
-              id="taskTitle"
-              placeholder="Assignment title (e.g., Data Structures Lab Report)..."
-              required
-              class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none transition"
-            />
-          </div>
-
-          <div class="sm:col-span-3">
-            <select
-              id="taskSubject"
-              aria-label="Subject"
-              class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none transition"
-            >
-              <!-- Populated dynamically -->
-            </select>
-          </div>
-
-          <div class="sm:col-span-3">
-            <input
-              type="date"
-              id="taskDueDate"
-              aria-label="Due Date"
-              required
-              class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none transition"
-            />
-          </div>
-        </div>
-
-        <!-- Secondary Compact Bar: Priority, Status, Note, Photo Upload, Submit -->
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div class="flex flex-wrap items-center gap-2 flex-1">
-            <select
-              id="taskPriority"
-              aria-label="Priority"
-              class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
-            >
-              <option value="High">Priority: High</option>
-              <option value="Medium" selected>Priority: Medium</option>
-              <option value="Low">Priority: Low</option>
-            </select>
-
-            <select
-              id="taskStatus"
-              aria-label="Status"
-              class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
-            >
-              <option value="Pending" selected>Status: Pending</option>
-              <option value="Completed">Status: Completed</option>
-            </select>
-
-            <input
-              type="text"
-              id="taskNotes"
-              placeholder="Short note (optional)..."
-              class="flex-1 min-w-[140px] rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:bg-white outline-none"
-            />
-
-            <!-- Minimal Image Upload Button -->
-            <div class="flex items-center gap-1.5">
-              <label
-                for="taskImageInput"
-                class="cursor-pointer rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 transition"
-              >
-                <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span id="uploadLabelText">Upload Photo</span>
-              </label>
-              <input type="file" id="taskImageInput" accept="image/*" class="hidden" />
-              <div id="imagePreviewBox" class="hidden relative">
-                <img id="formImagePreview" src="" alt="Preview" class="w-7 h-7 object-cover rounded-md border border-slate-300" />
-                <button type="button" id="clearImageBtn" title="Remove Image" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-bold">×</button>
-              </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2.5">
+              <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">College Assignment Tracker</h1>
+              <span id="liveClockBadge" class="hidden sm:inline-block text-[11px] font-medium text-slate-400 dark:text-slate-500"></span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <span>Total: <strong id="statTotal" class="text-slate-800 dark:text-slate-200">0</strong></span>
+              <span>·</span>
+              <span>Pending: <strong id="statPending" class="text-amber-600 dark:text-amber-400">0</strong></span>
+              <span>·</span>
+              <span>Done: <strong id="statCompleted" class="text-emerald-600 dark:text-emerald-400">0</strong></span>
+              <span>·</span>
+              <span>High Priority: <strong id="statHighPriority" class="text-rose-600 dark:text-rose-400">0</strong></span>
+              <span>·</span>
+              <span id="statProgressPct" class="font-semibold text-indigo-600 dark:text-indigo-400">0%</span>
             </div>
           </div>
-
-          <button
-            type="submit"
-            id="submitTaskBtn"
-            class="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white font-semibold text-xs py-2 px-4 rounded-xl transition flex items-center gap-1.5 shrink-0"
-          >
-            <span id="submitBtnText">Add Task</span>
-          </button>
-        </div>
-
-        <p id="formErrorMsg" class="hidden text-xs font-medium text-rose-600 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-1.5"></p>
-      </form>
-    </section>
-
-    <!-- 3. Minimal Assignments List -->
-    <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
-      <!-- Clean Filter Bar -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">Assignments</h2>
-          <span id="filteredCountBadge" class="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full">0</span>
-          <button type="button" id="quickCoachBtn" class="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 px-2 py-0.5 rounded-md border border-purple-200/80 dark:border-purple-800/80 transition flex items-center gap-1" title="Get instant study plan">
-            <span>✨ Study Plan</span>
-          </button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <!-- Status Tabs -->
-          <div class="inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5" role="group">
-            <button type="button" data-status-filter="All" class="status-tab-btn px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition">
-              All
-            </button>
-            <button type="button" data-status-filter="Pending" class="status-tab-btn px-2.5 py-1 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition">
-              Pending
-            </button>
-            <button type="button" data-status-filter="Completed" class="status-tab-btn px-2.5 py-1 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition">
-              Completed
-            </button>
-          </div>
-
-          <select id="filterPriority" aria-label="Filter Priority" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 outline-none">
-            <option value="All">All Priority</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
-          </select>
-
-          <select id="sortTasksSelect" aria-label="Sort Assignments" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 outline-none">
-            <option value="dueAsc">Due Date</option>
-            <option value="priorityDesc">Priority</option>
-            <option value="newest">Newest</option>
-          </select>
-
-          <input
-            type="text"
-            id="searchInput"
-            placeholder="Search..."
-            class="w-32 sm:w-40 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:bg-white outline-none"
-          />
+          <button id="openAuthModalBtn" type="button" class="text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1.5" title="Switch account">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="currentUserBadgeText">Student</span>
+            <span class="text-[10px] opacity-75">▾ Switch</span>
+          </button>
+          <button id="logoutBtn" type="button" class="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800/70 transition" title="Logout">
+            Logout
+          </button>
+          <button id="openSyncModalBtn" type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50/70 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1" title="Cloud sync, backup and restore">
+            <span id="cloudStatusDot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+            <span>⇄ Sync / Backup</span>
+          </button>
+          <button id="openAiCoachModalBtn" type="button" class="text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/70 hover:bg-purple-100 dark:hover:bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5 shadow-sm" title="Study roadmap from your tasks and notes">
+            <span>✨ AI Study Coach</span>
+          </button>
+          <button id="toggleTimerModalBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
+            ⏱ Focus Timer
+          </button>
+          <button id="exportCsvBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
+            Export CSV
+          </button>
+          <button id="themeToggleBtn" type="button" class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition">
+            <span id="themeToggleText">Light Mode</span>
+          </button>
+          <button id="clearAllTasksBtn" type="button" class="text-xs font-medium text-rose-500 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 px-2.5 py-1.5 rounded-lg transition" title="Delete all assignments">
+            Clear All
+          </button>
         </div>
       </div>
-
-      <!-- Assignments List Container -->
-      <div id="assignmentsListContainer" class="divide-y divide-slate-100 dark:divide-slate-800/80">
-        <!-- Rendered by JS -->
+      <div class="w-full bg-slate-100 dark:bg-slate-800 h-0.5 overflow-hidden">
+        <div id="statProgressBar" class="bg-indigo-600 dark:bg-indigo-500 h-full transition-all duration-300" style="width: 0%"></div>
       </div>
-    </section>
+    </header>
 
-    <!-- Creator Attribution Footer -->
-    <footer class="pt-2 pb-4 text-center">
-      <div class="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs">
-        <span class="text-xs text-slate-500 dark:text-slate-400">Designed &amp; Developed by</span>
-        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/70 px-2.5 py-0.5 rounded-lg border border-indigo-200/70 dark:border-indigo-800/70">
-          Piyush Sahu
-        </span>
-        <span class="text-xs text-slate-400 dark:text-slate-500">· Student Task &amp; Assignment Portal</span>
-      </div>
-    </footer>
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
 
-  </main>
+      <!-- Subjects -->
+      <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Subjects</h2>
+            <span id="activeSubjectHint" class="text-xs text-slate-500 dark:text-slate-400">Showing: All Subjects</span>
+          </div>
+          <button id="toggleManageSubjectsBtn" type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+            <span>✎ Add / Edit / Remove Subjects</span>
+          </button>
+        </div>
+
+        <div id="subjectPillsContainer" class="flex flex-wrap gap-1.5"></div>
+
+        <div id="manageSubjectsPanel" class="hidden mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+          <form id="addSubjectForm" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input type="hidden" id="editingSubjectOldName" value="" />
+            <input type="text" id="newSubjectName" maxlength="60" placeholder="Enter subject name (e.g., Mathematics, Data Structures)..."
+              class="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none" />
+            <div class="flex items-center gap-2">
+              <select id="newSubjectColor" aria-label="Subject Color" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none">
+                <option value="blue">Blue</option>
+                <option value="purple">Purple</option>
+                <option value="cyan">Cyan</option>
+                <option value="amber">Amber</option>
+                <option value="emerald">Green</option>
+                <option value="rose">Rose</option>
+                <option value="teal">Teal</option>
+              </select>
+              <button type="submit" id="subjectSubmitBtn" class="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition shrink-0">
+                + Add Subject
+              </button>
+              <button type="button" id="cancelSubjectEditBtn" class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800">
+                Cancel
+              </button>
+            </div>
+          </form>
+
+          <div>
+            <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-2">
+              Click <strong>Edit</strong> to rename or change color, or <strong>Remove</strong> to delete a subject:
+            </p>
+            <div id="subjectManageList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Add / Edit assignment -->
+      <section id="formSection" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <h2 id="formHeading" class="text-sm font-bold text-slate-800 dark:text-slate-100">Add New Assignment</h2>
+            <span id="workspaceOwnerLabel" class="text-[11px] font-medium text-slate-400 dark:text-slate-500">• Student Workspace</span>
+          </div>
+          <button id="cancelEditBtn" type="button" class="hidden text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg transition">
+            Cancel Edit
+          </button>
+        </div>
+
+        <form id="assignmentForm" class="space-y-3" novalidate>
+          <input type="hidden" id="editTaskId" value="" />
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+            <div class="sm:col-span-6">
+              <input type="text" id="taskTitle" maxlength="200" placeholder="Assignment title (e.g., Data Structures Lab Report)..." required
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none transition" />
+            </div>
+            <div class="sm:col-span-3">
+              <select id="taskSubject" aria-label="Subject"
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none transition"></select>
+            </div>
+            <div class="sm:col-span-3">
+              <input type="date" id="taskDueDate" aria-label="Due Date" required
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 outline-none transition" />
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div class="flex flex-wrap items-center gap-2 flex-1">
+              <select id="taskPriority" aria-label="Priority" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none">
+                <option value="High">Priority: High</option>
+                <option value="Medium" selected>Priority: Medium</option>
+                <option value="Low">Priority: Low</option>
+              </select>
+
+              <select id="taskStatus" aria-label="Status" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none">
+                <option value="Pending" selected>Status: Pending</option>
+                <option value="Completed">Status: Completed</option>
+              </select>
+
+              <input type="text" id="taskNotes" maxlength="500" placeholder="Short note (optional)..."
+                class="flex-1 min-w-[140px] rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 outline-none" />
+
+              <div class="flex items-center gap-1.5">
+                <label for="taskImageInput" class="cursor-pointer rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 transition">
+                  <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span id="uploadLabelText">Upload Photo</span>
+                </label>
+                <input type="file" id="taskImageInput" accept="image/*" class="hidden" />
+                <div id="imagePreviewBox" class="hidden relative">
+                  <img id="formImagePreview" src="" alt="Preview" class="w-7 h-7 object-cover rounded-md border border-slate-300" />
+                  <button type="button" id="clearImageBtn" title="Remove Image" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-bold">×</button>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="submitTaskBtn" class="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white font-semibold text-xs py-2 px-4 rounded-xl transition flex items-center gap-1.5 shrink-0">
+              <span id="submitBtnText">Add Task</span>
+            </button>
+          </div>
+
+          <p id="formErrorMsg" class="hidden text-xs font-medium text-rose-600 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-1.5"></p>
+        </form>
+      </section>
+
+      <!-- Assignments list -->
+      <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">Assignments</h2>
+            <span id="filteredCountBadge" class="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full">0</span>
+            <button type="button" id="quickCoachBtn" class="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 px-2 py-0.5 rounded-md border border-purple-200/80 dark:border-purple-800/80 transition flex items-center gap-1" title="Get instant study plan">
+              <span>✨ Study Plan</span>
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5" role="group">
+              <button type="button" data-status-filter="All" class="status-tab-btn px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition">All</button>
+              <button type="button" data-status-filter="Pending" class="status-tab-btn px-2.5 py-1 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition">Pending</button>
+              <button type="button" data-status-filter="Completed" class="status-tab-btn px-2.5 py-1 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition">Completed</button>
+            </div>
+
+            <select id="filterPriority" aria-label="Filter Priority" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 outline-none">
+              <option value="All">All Priority</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+
+            <select id="sortTasksSelect" aria-label="Sort Assignments" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 outline-none">
+              <option value="dueAsc">Due Date</option>
+              <option value="priorityDesc">Priority</option>
+              <option value="newest">Newest</option>
+            </select>
+
+            <input type="text" id="searchInput" placeholder="Search..."
+              class="w-32 sm:w-40 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 outline-none" />
+          </div>
+        </div>
+
+        <div id="assignmentsListContainer" class="divide-y divide-slate-100 dark:divide-slate-800/80"></div>
+      </section>
+
+      <footer class="pt-2 pb-4 text-center">
+        <div class="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm">
+          <span class="text-xs text-slate-500 dark:text-slate-400">Designed &amp; Developed by</span>
+          <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/70 px-2.5 py-0.5 rounded-lg border border-indigo-200/70 dark:border-indigo-800/70">Piyush Sahu</span>
+          <span class="text-xs text-slate-400 dark:text-slate-500">· Student Task &amp; Assignment Portal</span>
+        </div>
+      </footer>
+
+    </main>
   </div><!-- /#appDashboardWrapper -->
 
-  <!-- Minimal Focus Timer Modal (Tucked Away to Keep Main UI Clean) -->
-    <!-- Smart AI Study Coach & Task Guide Modal -->
-  <div id="aiCoachModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+  <!-- AI Study Coach Modal -->
+  <div id="aiCoachModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-      
-      <!-- Modal Top Bar -->
       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-            ✨
-          </div>
+          <div class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">✨</div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="text-base font-bold text-slate-900 dark:text-white">
-                AI Study Coach &amp; Task Guide
-              </h3>
-              <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                Live Insights
-              </span>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">AI Study Coach &amp; Task Guide</h3>
+              <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">Live Insights</span>
             </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              Personalized study roadmap analyzing your active assignments, deadlines, and notes
-            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Study roadmap based on your active assignments, deadlines and notes</p>
           </div>
         </div>
         <button type="button" id="closeAiCoachModalBtn" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm font-bold px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">✕</button>
       </div>
 
-      <!-- Coach Content Output Box -->
-      <div id="aiCoachOutputContainer" class="space-y-4">
-        <!-- Rendered dynamically by generateSmartStudyRoadmap() -->
-      </div>
+      <div id="aiCoachOutputContainer" class="space-y-4"></div>
 
-      <!-- Optional Gemini API Key Box for Real Generative AI -->
       <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
         <div class="flex items-center justify-between cursor-pointer py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 transition" id="toggleAiKeyPanel">
           <span class="flex items-center gap-1.5">
@@ -407,37 +308,26 @@
 
         <div id="aiKeyPanel" class="hidden p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5">
           <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-            Enter your free <strong>Google AI Studio (Gemini) API Key</strong> to ask AI questions about your notes, get full syllabus breakdowns, or receive custom motivational coaching:
+            Enter your free <strong>Google AI Studio (Gemini) API Key</strong> to get a deeper AI plan. The key is saved only in this browser.
           </p>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <input
-              type="password"
-              id="geminiApiKeyInput"
-              placeholder="Paste Gemini API Key (AIzaSy...)"
-              class="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500"
-            />
-            <button
-              type="button"
-              id="saveAndRunGeminiBtn"
-              class="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition shrink-0 flex items-center justify-center gap-1.5"
-            >
+            <input type="password" id="geminiApiKeyInput" placeholder="Paste Gemini API Key (AIzaSy...)"
+              class="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500" />
+            <button type="button" id="saveAndRunGeminiBtn" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition shrink-0 flex items-center justify-center gap-1.5">
               <span>Ask Gemini AI →</span>
             </button>
           </div>
-          <div id="geminiAiLoading" class="hidden text-xs text-purple-600 dark:text-purple-400 font-medium animate-pulse">
-            Analyzing assignments with Gemini AI...
-          </div>
+          <div id="geminiAiLoading" class="hidden text-xs text-purple-600 dark:text-purple-400 font-medium animate-pulse">Analyzing assignments with Gemini AI...</div>
           <div id="geminiAiResponseBox" class="hidden p-3 rounded-xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 text-xs text-slate-800 dark:text-slate-200 space-y-2 leading-relaxed"></div>
         </div>
       </div>
 
-      <!-- Modal Bottom Actions -->
       <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" id="copyStudyPlanBtn" class="text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-xl transition flex items-center gap-1.5">
             <span>📋 Copy Plan</span>
           </button>
-          <button type="button" id="startTopTaskTimerBtn" class="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs">
+          <button type="button" id="startTopTaskTimerBtn" class="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
             <span>⏱ Start Focus Timer on #1 Task</span>
           </button>
         </div>
@@ -446,7 +336,8 @@
     </div>
   </div>
 
-  <div id="timerModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+  <!-- Focus Timer Modal -->
+  <div id="timerModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-xs w-full shadow-xl">
       <div class="flex items-center justify-between mb-3">
         <div>
@@ -459,28 +350,20 @@
         <button type="button" id="modeFocusBtn" class="flex-1 py-1 rounded-lg bg-slate-900 dark:bg-indigo-600 text-white">25m Focus</button>
         <button type="button" id="modeBreakBtn" class="flex-1 py-1 rounded-lg text-slate-600 dark:text-slate-300">5m Break</button>
       </div>
-      <div id="pomodoroDisplay" class="text-4xl font-bold font-mono text-center my-4 text-slate-900 dark:text-white">
-        25:00
-      </div>
+      <div id="pomodoroDisplay" class="text-4xl font-bold font-mono text-center my-4 text-slate-900 dark:text-white">25:00</div>
       <div class="grid grid-cols-2 gap-2">
-        <button type="button" id="timerStartPauseBtn" class="bg-slate-900 dark:bg-indigo-600 text-white text-xs font-semibold py-2 rounded-xl">
-          Start Focus
-        </button>
-        <button type="button" id="timerResetBtn" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold py-2 rounded-xl">
-          Reset Timer
-        </button>
+        <button type="button" id="timerStartPauseBtn" class="bg-slate-900 dark:bg-indigo-600 text-white text-xs font-semibold py-2 rounded-xl">Start Focus</button>
+        <button type="button" id="timerResetBtn" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold py-2 rounded-xl">Reset Timer</button>
       </div>
     </div>
   </div>
 
-  <!-- Full-Screen Image Lightbox Modal -->
-  <div id="imageLightboxModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+  <!-- Image Lightbox -->
+  <div id="imageLightboxModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="relative max-w-2xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xl">
       <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
         <h3 id="lightboxTitle" class="text-sm font-bold text-slate-800 dark:text-white truncate">Attachment</h3>
-        <button type="button" id="closeLightboxBtn" class="text-slate-500 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-xs font-semibold">
-          Close (ESC)
-        </button>
+        <button type="button" id="closeLightboxBtn" class="text-slate-500 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg text-xs font-semibold">Close (ESC)</button>
       </div>
       <div class="max-h-[75vh] overflow-auto flex items-center justify-center bg-slate-50 dark:bg-slate-950 rounded-xl p-2">
         <img id="lightboxImage" src="" alt="Attachment" class="max-w-full max-h-[70vh] object-contain rounded-lg" />
@@ -488,9 +371,8 @@
     </div>
   </div>
 
-  <!-- Full-Screen Minimal Login & Welcome Landing Page -->
+  <!-- Login / Welcome page -->
   <div id="authModal" class="min-h-screen w-full bg-[#f8fafc] dark:bg-slate-950 flex flex-col justify-between py-8 px-4 sm:px-6">
-    <!-- Top Minimal Brand Bar -->
     <div class="max-w-5xl w-full mx-auto flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center font-bold">
@@ -500,18 +382,15 @@
         </div>
         <span class="text-sm font-bold tracking-tight text-slate-900 dark:text-white">College Assignment Tracker</span>
       </div>
-
       <div class="flex items-center gap-2">
-        <button type="button" id="closeAuthModalBtn" class="hidden text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-lg hover:bg-slate-100">
+        <button type="button" id="closeAuthModalBtn" class="hidden text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
           Back to Dashboard ✕
         </button>
       </div>
     </div>
 
-    <!-- Center 2-Column Minimal Layout: Left = Website Uses & Creator Info | Right = Login / Signup / Google Auth -->
     <div class="max-w-5xl w-full mx-auto my-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 
-      <!-- Left Column: Website Introduction, Uses & Creator Reference (7 Cols) -->
       <div class="lg:col-span-7 space-y-6">
         <div class="space-y-3">
           <div class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/60 px-3 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900">
@@ -525,57 +404,29 @@
           </p>
         </div>
 
-        <!-- Website Uses / Kya-Kya Kar Sakte Hain -->
         <div class="space-y-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Key Features &amp; What You Can Do:
-          </h3>
-
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Key Features &amp; What You Can Do:</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
-              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                1. Subject-Wise Task Management
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Create your own custom subjects with color tags, organize homework by course, and edit or remove subjects anytime.
-              </p>
+            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-1">
+              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>1. Subject-Wise Task Management</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Create your own custom subjects with color tags, organize homework by course, and edit or remove subjects anytime.</p>
             </div>
-
-            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
-              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                2. Question &amp; Notes Photo Upload
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Attach photos of question papers, blackboard notes, or practical outputs to any assignment and view them in full screen.
-              </p>
+            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-1">
+              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>2. Question &amp; Notes Photo Upload</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Attach photos of question papers, blackboard notes, or practical outputs to any assignment and view them in full screen.</p>
             </div>
-
-            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
-              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                3. Deadline &amp; Priority Tracking
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Set submission due dates and High, Medium, or Low priority levels with automatic deadline countdown badges.
-              </p>
+            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-1">
+              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span>3. Deadline &amp; Priority Tracking</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Set submission due dates and High, Medium, or Low priority levels with automatic deadline countdown badges.</p>
             </div>
-
-            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1">
-              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                4. Secure Login, Timer &amp; Cloud Sync
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Every student gets a private login workspace, a built-in 25-minute Study Focus Timer, Cloud Sync, and one-click CSV export.
-              </p>
+            <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-1">
+              <div class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-rose-500"></span>4. Secure Login, Timer &amp; Cloud Sync</div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Every student gets a private login workspace, a built-in 25-minute Study Focus Timer, Cloud Sync, and one-click CSV export.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Column: Minimal Login / Sign Up / Google Auth Card (5 Cols) -->
       <div class="lg:col-span-5">
         <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
           <div>
@@ -583,150 +434,50 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sign in securely to your student workspace using email and password</p>
           </div>
 
-          <!-- Google login not enabled Button -->
-          <div class="space-y-2">
-            <button
-              type="button"
-              id="googleConnectBtn" disabled
-              class="w-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-semibold text-xs py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs transition flex items-center justify-center gap-2.5"
-            >
-              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.8C6.2 7.2 8.9 5 12 5z"/>
-                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/>
-                <path fill="#FBBC05" d="M5.3 14.8c-.2-.8-.4-1.8-.4-2.8s.2-2 .4-2.8L1.6 6.4C.6 8.4 0 10.6 0 12s.6 3.6 1.6 5.6l3.7-2.8z"/>
-                <path fill="#34A853" d="M12 23c3 0 5.5-1 7.4-2.7l-3.7-2.9c-1 .7-2.3 1.1-3.7 1.1-3.1 0-5.8-2.1-6.7-5L1.6 16.3C3.5 20.4 7.4 23 12 23z"/>
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-
-            <!-- Inline Google Account Connect Box (Toggles when clicking Google login not enabled) -->
-            <form id="googleAuthForm" class="hidden p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2.5" novalidate>
-              <p class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                Connect Google Account (Gmail):
-              </p>
-              <input
-                type="text"
-                id="googleUserName"
-                placeholder="Your Full Name (e.g., Piyush Sahu)"
-                required
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
-              <input
-                type="email"
-                id="googleUserEmail"
-                placeholder="Your Gmail Address (e.g., piyush@gmail.com)"
-                required
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
-              <button
-                type="submit"
-                class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2 rounded-lg transition"
-              >
-                Continue as Google User →
-              </button>
-            </form>
-          </div>
-
-          <div class="relative flex py-1 items-center">
-            <div class="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-            <span class="shrink mx-3 text-[11px] text-slate-400">or use Email & Password</span>
-            <div class="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
-          </div>
-
-          <!-- Mode Switch Tabs -->
           <div class="grid grid-cols-2 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
-            <button type="button" id="tabLoginBtn" class="py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition">
-              Login Existing ID
-            </button>
-            <button type="button" id="tabSignupBtn" class="py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition">
-              + Create New Account
-            </button>
+            <button type="button" id="tabLoginBtn" class="py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition">Login Existing ID</button>
+            <button type="button" id="tabSignupBtn" class="py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition">+ Create New Account</button>
           </div>
 
           <p id="authErrorMsg" class="hidden text-xs font-medium text-rose-600 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2"></p>
 
-          <!-- Login Form -->
           <form id="loginForm" class="space-y-3" novalidate>
-            <input type="hidden" id="loginUserId" value="" />
             <div>
               <label for="loginEmail" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
-              <input
-                type="text"
-                id="loginEmail"
-                type="email"
-                placeholder="Enter your email address"
-                required
-                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
+              <input type="email" id="loginEmail" autocomplete="email" placeholder="Enter your email address" required
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500" />
             </div>
             <div>
               <label for="loginPin" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Password</label>
-              <input
-                type="password"
-                id="loginPin"
-                placeholder="Enter your password"
-                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
+              <input type="password" id="loginPin" autocomplete="current-password" placeholder="Enter your password"
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500" />
             </div>
-            <button type="submit" class="w-full bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-xl transition">
-              Login to Workspace
-            </button>
+            <button type="submit" class="w-full bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-xl transition">Login to Workspace</button>
+            <button type="button" id="forgotPasswordBtn" class="w-full text-center text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Forgot password? Send reset email</button>
           </form>
 
-          <!-- Sign Up Form -->
           <form id="signupForm" class="hidden space-y-3" novalidate>
-            <input type="hidden" id="signupUserId" value="" />
             <div>
               <label for="signupName" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name <span class="text-rose-500">*</span></label>
-              <input
-                type="text"
-                id="signupName"
-                placeholder="e.g., Piyush Sahu"
-                required
-                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
+              <input type="text" id="signupName" maxlength="60" autocomplete="name" placeholder="e.g., Piyush Sahu" required
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500" />
             </div>
             <div>
               <label for="signupEmail" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address <span class="text-rose-500">*</span></label>
-              <input
-                type="text"
-                id="signupEmail"
-                type="email"
-                placeholder="you@example.com"
-                required
-                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
+              <input type="email" id="signupEmail" autocomplete="email" placeholder="you@example.com" required
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500" />
             </div>
             <div>
               <label for="signupPin" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Create Password (6+ characters) <span class="text-rose-500">*</span></label>
-              <input
-                type="password"
-                id="signupPin"
-                placeholder="Create a strong password"
-                required
-                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500"
-              />
+              <input type="password" id="signupPin" autocomplete="new-password" placeholder="Create a strong password" required
+                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500" />
             </div>
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-xl transition">
-              Create Account &amp; Start Fresh
-            </button>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-xl transition">Create Account &amp; Start Fresh</button>
           </form>
-
-          <!-- Saved Accounts on this Browser -->
-          <div class="pt-3 border-t border-slate-100 dark:border-slate-800">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
-              Saved Accounts on This Browser:
-            </p>
-            <div id="savedUsersList" class="flex flex-wrap gap-1.5">
-              <!-- Populated dynamically -->
-            </div>
-          </div>
         </div>
       </div>
-
     </div>
 
-    <!-- Bottom Creator Attribution Bar on Login Page -->
     <div class="max-w-5xl w-full mx-auto text-center pt-4 border-t border-slate-200/60 dark:border-slate-800/80">
       <p class="text-xs text-slate-500 dark:text-slate-400">
         Designed &amp; Developed by <strong class="text-indigo-600 dark:text-indigo-400">Piyush Sahu</strong> · College Homework &amp; Assignment Management Portal
@@ -734,97 +485,62 @@
     </div>
   </div>
 
-  <!-- Cross-System Cloud Database & Sync Modal -->
-  <div id="syncModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+  <!-- Cloud Sync & Backup Modal -->
+  <div id="syncModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
         <div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-white">☁️ Online Cloud Database &amp; ID Sync</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Firebase Database URL to access your User ID from any device</p>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">☁️ Cloud Sync &amp; Backup</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Your tasks sync automatically to your account. Backup / restore is optional.</p>
         </div>
         <button type="button" id="closeSyncModalBtn" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm font-bold px-2">✕</button>
       </div>
 
-      <!-- Live Cloud Database (Firebase Realtime DB) Configuration Box -->
       <div class="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-2.5">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-            🌐 Automatic Online Cloud Database (Firebase)
-          </p>
-          <span id="cloudModalStatusBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-            Not Connected
-          </span>
+          <p class="text-xs font-bold text-indigo-900 dark:text-indigo-200">🌐 Automatic Cloud Sync (Firebase)</p>
+          <span id="cloudModalStatusBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Signed out</span>
         </div>
         <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-          Paste your free <strong>Firebase Realtime Database URL</strong> below. Sign in with Firebase Email/Password first. Each signed-in account syncs only its own task text and subjects; photos stay on this browser.
+          Task text and subjects sync to your signed-in account, so you can open them on any device. <strong>Photos stay only in this browser.</strong>
         </p>
-        <input
-          type="url"
-          id="cloudDbUrlInput"
-          placeholder="https://your-project-default-rtdb.firebaseio.com"
-          class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
-        />
+        <button type="button" id="syncNowBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">Sync Now</button>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-800 space-y-2.5">
+        <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">Step 1: Export Backup Code or File</p>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Includes subjects and all assignments (with photos). The code is <strong>not encrypted</strong> — share it only with yourself.</p>
         <div class="flex items-center gap-2">
-          <button type="button" id="saveCloudDbUrlBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">
-            Connect &amp; Sync Now
-          </button>
-          <button type="button" id="disconnectCloudDbBtn" class="bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-medium py-2 px-3 rounded-xl transition">
-            Disconnect
-          </button>
+          <button type="button" id="copySyncCodeBtn" class="flex-1 bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">Copy Sync Code</button>
+          <button type="button" id="downloadSyncFileBtn" class="flex-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold py-2 px-3 rounded-xl transition">Download (.json)</button>
         </div>
       </div>
 
-      <!-- Export / Copy Sync Code -->
       <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-800 space-y-2.5">
-        <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">
-          Step 1: Export Your Account Sync Code or Backup File
-        </p>
-        <p class="text-[11px] text-slate-500 dark:text-slate-400">
-          Includes your User ID, custom subjects, and all assignments:
-        </p>
+        <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">Step 2: Restore from Sync Code or Backup File</p>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Restoring replaces the current subjects and assignments of this account.</p>
+        <textarea id="importSyncCodeInput" rows="2" placeholder="Paste your Sync Code here..."
+          class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"></textarea>
         <div class="flex items-center gap-2">
-          <button type="button" id="copySyncCodeBtn" class="flex-1 bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">
-            Copy Sync Code
-          </button>
-          <button type="button" id="downloadSyncFileBtn" class="flex-1 bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold py-2 px-3 rounded-xl transition">
-            Download ID File (.json)
-          </button>
-        </div>
-      </div>
-
-      <!-- Import / Restore on Another System -->
-      <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-800 space-y-2.5">
-        <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">
-          Step 2: Restore on Another Device via Sync Code or Backup File
-        </p>
-        <textarea
-          id="importSyncCodeInput"
-          rows="2"
-          placeholder="Paste your Sync Code here..."
-          class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
-        ></textarea>
-        <div class="flex items-center gap-2">
-          <button type="button" id="restoreSyncCodeBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">
-            Restore from Code
-          </button>
-          <label for="uploadSyncFileInput" class="flex-1 text-center cursor-pointer bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold py-2 px-3 rounded-xl transition">
-            Upload ID File (.json)
-          </label>
+          <button type="button" id="restoreSyncCodeBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2 px-3 rounded-xl transition">Restore from Code</button>
+          <label for="uploadSyncFileInput" class="flex-1 text-center cursor-pointer bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold py-2 px-3 rounded-xl transition">Upload (.json)</label>
           <input type="file" id="uploadSyncFileInput" accept=".json,application/json" class="hidden" />
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Minimal Toast Notification -->
-  <div id="toastBox" class="fixed bottom-5 right-5 z-50 hidden">
+  <!-- Toast -->
+  <div id="toastBox" class="fixed bottom-5 right-5 z-[70] hidden">
     <div class="bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg border border-slate-700">
       <span id="toastMessage">Saved</span>
     </div>
   </div>
 
   <script>
-    // Missing helper functions restored for subject/task rendering.
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, function (ch) {
         return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
@@ -834,20 +550,93 @@
     function showToast(message) {
       const box = document.getElementById('toastBox');
       const label = document.getElementById('toastMessage');
-      if (!box || !label) {
-        console.info(String(message ?? ''));
-        return;
-      }
+      if (!box || !label) { console.info(String(message ?? '')); return; }
       label.textContent = String(message ?? '');
       box.classList.remove('hidden');
-      if (window.__collegeTrackerToastTimer) {
-        clearTimeout(window.__collegeTrackerToastTimer);
-      }
-      window.__collegeTrackerToastTimer = setTimeout(() => {
-        box.classList.add('hidden');
-      }, 2600);
+      if (window.__toastTimer) clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => box.classList.add('hidden'), 2600);
     }
 
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (e) { /* fall through to legacy copy */ }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (e) { return false; }
+    }
+
+    function b64EncodeUtf8(str) {
+      const bytes = new TextEncoder().encode(str);
+      let bin = '';
+      bytes.forEach(b => { bin += String.fromCharCode(b); });
+      return btoa(bin);
+    }
+    function b64DecodeUtf8(b64) {
+      const bin = atob(b64);
+      const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+
+    function newId() {
+      return 'task-' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2, 8)));
+    }
+
+    // ---- Dates (always based on the real current date, in local time) ----
+    function getToday() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    function toDateInputValue(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    function todayStr() { return toDateInputValue(new Date()); }
+    function parseLocalDate(str) {
+      const parts = String(str || '').split('-');
+      if (parts.length !== 3) return null;
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    function daysUntil(dueDateStr) {
+      const due = parseLocalDate(dueDateStr);
+      if (!due) return null;
+      return Math.round((due - getToday()) / (1000 * 60 * 60 * 24));
+    }
+
+    // ------------------------------------------------------------------
+    // Theme (dark by default, remembered after the first toggle)
+    // ------------------------------------------------------------------
+    const THEME_KEY = 'college_theme_v1';
+    function applyThemeLabel() {
+      const isDark = document.documentElement.classList.contains('dark');
+      const label = document.getElementById('themeToggleText');
+      if (label) label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    }
+    function toggleTheme() {
+      const el = document.documentElement;
+      el.classList.toggle('dark');
+      try { localStorage.setItem(THEME_KEY, el.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+      applyThemeLabel();
+    }
+
+    // ------------------------------------------------------------------
+    // Subjects & colour palettes
+    // ------------------------------------------------------------------
     const COLOR_PALETTES = {
       blue:    { key: 'blue',    badgeBg: 'bg-blue-50 dark:bg-blue-950/50',       badgeText: 'text-blue-700 dark:text-blue-300',       badgeBorder: 'border-blue-200 dark:border-blue-800/60',       dot: 'bg-blue-500' },
       purple:  { key: 'purple',  badgeBg: 'bg-purple-50 dark:bg-purple-950/50',   badgeText: 'text-purple-700 dark:text-purple-300',   badgeBorder: 'border-purple-200 dark:border-purple-800/60',   dot: 'bg-purple-500' },
@@ -858,101 +647,129 @@
       teal:    { key: 'teal',    badgeBg: 'bg-teal-50 dark:bg-teal-950/50',       badgeText: 'text-teal-700 dark:text-teal-300',       badgeBorder: 'border-teal-200 dark:border-teal-800/60',       dot: 'bg-teal-500' }
     };
 
+    let SUBJECTS = [];
+
     function getSubjectStyle(subjectName) {
       const subject = SUBJECTS.find(s => s && s.name === subjectName);
-      if (subject) return subject;
-      return COLOR_PALETTES.blue;
+      return subject || COLOR_PALETTES.blue;
     }
 
-    function getDefaultSubjects() {
-      // Starts with 0 subjects by default — users add, edit, and remove their own subjects!
-      return [];
+    // ---- Validation of anything that comes from storage, cloud, or an imported file ----
+    const VALID_PRIORITIES = ['High', 'Medium', 'Low'];
+    const VALID_STATUSES = ['Pending', 'Completed'];
+
+    function sanitizeSubjects(list) {
+      if (!Array.isArray(list)) return [];
+      const seen = new Set();
+      const out = [];
+      list.forEach(s => {
+        if (!s || typeof s !== 'object') return;
+        const name = String(s.name ?? '').trim().slice(0, 60);
+        if (!name || seen.has(name.toLowerCase())) return;
+        seen.add(name.toLowerCase());
+        const palette = COLOR_PALETTES[s.key] || COLOR_PALETTES.blue;
+        out.push({ name, ...palette });
+      });
+      return out;
     }
 
-    let SUBJECTS = getDefaultSubjects();
-
-    // Aap chahein toh apna Firebase Realtime DB URL seedha niche DEFAULT_CLOUD_DB_URL me bhi likh sakte hain:
-    const DEFAULT_CLOUD_DB_URL = 'https://assignment-tracker-d8f2b-default-rtdb.asia-southeast1.firebasedatabase.app';
-    const CLOUD_DB_URL_KEY = 'college_student_cloud_db_url_v1';
-
-    const STORAGE_KEY = 'college_student_tasks_zero_v1';
-    const SUBJECTS_STORAGE_KEY = 'college_student_subjects_v2';
-    const USERS_REGISTRY_KEY = 'college_student_users_registry_v2';
-    const ACTIVE_USER_KEY = 'college_student_active_user_v2';
-
-    function getCloudDbUrl() {
-      try {
-        const saved = localStorage.getItem(CLOUD_DB_URL_KEY);
-        if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
-      } catch (e) {}
-      return DEFAULT_CLOUD_DB_URL ? DEFAULT_CLOUD_DB_URL.trim().replace(/\/+$/, '') : '';
+    function sanitizeTask(t) {
+      if (!t || typeof t !== 'object') return null;
+      const title = String(t.title ?? '').trim().slice(0, 200);
+      if (!title) return null;
+      const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(String(t.dueDate || '')) ? String(t.dueDate) : '';
+      const image = (typeof t.imageData === 'string' && t.imageData.startsWith('data:image/') && t.imageData.length < 2000000) ? t.imageData : '';
+      return {
+        id: String(t.id ?? '').replace(/[^\w-]/g, '') || newId(),
+        title,
+        subject: String(t.subject ?? 'General').trim().slice(0, 60) || 'General',
+        dueDate,
+        priority: VALID_PRIORITIES.includes(t.priority) ? t.priority : 'Medium',
+        status: VALID_STATUSES.includes(t.status) ? t.status : 'Pending',
+        notes: String(t.notes ?? '').slice(0, 500),
+        imageData: image
+      };
     }
+
+    function sanitizeTasks(list) {
+      if (!Array.isArray(list)) return [];
+      return list.map(sanitizeTask).filter(Boolean);
+    }
+
+    // ------------------------------------------------------------------
+    // Firebase (auth + realtime database over REST)
+    // ------------------------------------------------------------------
+    // Firebase security is enforced by Authentication + Database Rules (see Firebase console).
+    const firebaseConfig = {
+      apiKey: 'AIzaSyB7UB04x3Jd484Hdf9NKroWtmuuAMeDEeM',
+      authDomain: 'assignment-tracker-d8f2b.firebaseapp.com',
+      databaseURL: 'https://assignment-tracker-d8f2b-default-rtdb.asia-southeast1.firebasedatabase.app',
+      projectId: 'assignment-tracker-d8f2b',
+      storageBucket: 'assignment-tracker-d8f2b.firebasestorage.app',
+      messagingSenderId: '87885100301',
+      appId: '1:87885100301:web:c577be5d561a71b6a46c44'
+    };
+    if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const CLOUD_DB_URL = firebaseConfig.databaseURL.replace(/\/+$/, '');
+
+    let currentUser = null;           // { uid, userId, name, email }
+    let pendingSignupName = null;     // display name typed during sign up
+    let cloudWritesPaused = false;
+    let cloudPushTimer = null;
 
     function updateCloudIndicatorUI() {
-      const url = getCloudDbUrl();
       const dot = document.getElementById('cloudStatusDot');
       const badge = document.getElementById('cloudModalStatusBadge');
-      if (url) {
-        if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
-        if (badge) {
-          badge.textContent = 'URL Configured';
-          badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300';
-        }
-      } else {
-        if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
-        if (badge) {
-          badge.textContent = 'Local Mode';
-          badge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
-        }
+      const active = !!(currentUser && currentUser.uid);
+      if (dot) dot.className = active ? 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-slate-400';
+      if (badge) {
+        badge.textContent = active ? 'Sync Active' : 'Signed out';
+        badge.className = active
+          ? 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+          : 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
       }
     }
 
-    let cloudWritesPaused = false;
-    let pendingFirebaseProfile = null;
-    // Coalesce rapid local saves into one cloud write after the user pauses briefly.
-    // This reduces duplicate writes without changing the Firebase data structure.
-    let cloudPushTimer = null;
-    function scheduleCloudPush(delay = 700) {
-      if (cloudWritesPaused || !currentUser || !currentUser.uid || !getCloudDbUrl()) return;
-      if (cloudPushTimer) clearTimeout(cloudPushTimer);
-      cloudPushTimer = setTimeout(() => {
-        cloudPushTimer = null;
-        pushCurrentUserToCloud();
-      }, delay);
+    function firebaseAuthUser() {
+      return (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) ? firebase.auth().currentUser : null;
     }
 
-    function firebaseAuthReady() {
-      return typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0 && firebase.auth().currentUser;
+    // Coalesce rapid local saves into one cloud write after a short pause.
+    function scheduleCloudPush(delay = 700) {
+      if (cloudWritesPaused || !currentUser || !currentUser.uid) return;
+      if (cloudPushTimer) clearTimeout(cloudPushTimer);
+      cloudPushTimer = setTimeout(() => { cloudPushTimer = null; pushCurrentUserToCloud(); }, delay);
     }
 
     async function pushCurrentUserToCloud() {
-      if (cloudWritesPaused || !currentUser || !currentUser.uid || !getCloudDbUrl()) return;
-      const authUser = firebaseAuthReady();
-      if (!authUser) return;
+      if (cloudWritesPaused || !currentUser || !currentUser.uid) return false;
+      const authUser = firebaseAuthUser();
+      if (!authUser || authUser.uid !== currentUser.uid) return false;
       try {
         const token = await authUser.getIdToken();
         const payload = {
           user: { uid: currentUser.uid, userId: currentUser.userId, name: currentUser.name, email: currentUser.email },
           subjects: SUBJECTS,
-          // Attachments stay in this browser; only task text/metadata is synced.
+          // Photos stay in this browser; only task text/metadata is synced.
           tasks: tasks.map(({ imageData, ...task }) => ({ ...task, hasAttachment: !!imageData })),
           updatedAt: Date.now()
         };
-        const url = getCloudDbUrl() + '/student_workspaces/' + encodeURIComponent(currentUser.uid) + '.json?auth=' + encodeURIComponent(token);
+        const url = CLOUD_DB_URL + '/student_workspaces/' + encodeURIComponent(currentUser.uid) + '.json?auth=' + encodeURIComponent(token);
         const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!res.ok) console.warn('Cloud push failed:', res.status, await res.text());
-      } catch (err) { console.warn('Cloud push error:', err); }
+        if (!res.ok) { console.warn('Cloud push failed:', res.status); return false; }
+        return true;
+      } catch (err) { console.warn('Cloud push error:', err); return false; }
     }
 
     async function fetchUserFromCloud(uid) {
-      const baseUrl = getCloudDbUrl();
-      const authUser = firebaseAuthReady();
-      if (!baseUrl || !uid || !authUser || authUser.uid !== uid) return null;
+      const authUser = firebaseAuthUser();
+      if (!uid || !authUser || authUser.uid !== uid) return null;
       try {
         const token = await authUser.getIdToken();
-        const res = await fetch(baseUrl + '/student_workspaces/' + encodeURIComponent(uid) + '.json?auth=' + encodeURIComponent(token));
+        const res = await fetch(CLOUD_DB_URL + '/student_workspaces/' + encodeURIComponent(uid) + '.json?auth=' + encodeURIComponent(token));
         if (!res.ok) {
-          if (res.status !== 404) console.warn('Cloud fetch failed:', res.status, await res.text());
+          if (res.status !== 404) console.warn('Cloud fetch failed:', res.status);
           return null;
         }
         return await res.json();
@@ -965,13 +782,15 @@
       try {
         const remote = await fetchUserFromCloud(authUser.uid);
         const email = (authUser.email || '').toLowerCase();
-        const localId = (pendingFirebaseProfile && pendingFirebaseProfile.email === email)
-          ? pendingFirebaseProfile.userId
-          : ((remote && remote.user && remote.user.userId) || email.split('@')[0].replace(/[^a-z0-9_-]/g, '') || 'student');
-        const displayName = (pendingFirebaseProfile && pendingFirebaseProfile.email === email && pendingFirebaseProfile.name)
+        const localId = email.split('@')[0].replace(/[^a-z0-9_-]/g, '') || 'student';
+        const displayName = pendingSignupName
+          || (authUser.displayName)
           || (remote && remote.user && remote.user.name)
-          || (authUser.displayName || email.split('@')[0] || 'Student');
-        // One-time local migration: keep this browser's old local tasks/subjects, including photos.
+          || email.split('@')[0] || 'Student';
+
+        currentUser = { uid: authUser.uid, userId: localId, name: String(displayName).slice(0, 60), email };
+
+        // One-time migration of older local data (keys that used the e-mail prefix instead of the uid).
         try {
           const newTasksKey = `college_tasks_user_${authUser.uid}`;
           const newSubjectsKey = `college_subjects_zero_${authUser.uid}`;
@@ -980,99 +799,117 @@
           if (localStorage.getItem(newTasksKey) === null && localStorage.getItem(oldTasksKey) !== null) localStorage.setItem(newTasksKey, localStorage.getItem(oldTasksKey));
           if (localStorage.getItem(newSubjectsKey) === null && localStorage.getItem(oldSubjectsKey) !== null) localStorage.setItem(newSubjectsKey, localStorage.getItem(oldSubjectsKey));
         } catch (migrationError) { console.warn('Local data migration skipped:', migrationError); }
-        currentUser = { uid: authUser.uid, userId: localId, name: displayName, email };
-        const registryIndex = usersRegistry.findIndex(u => u.uid === authUser.uid || u.userId === localId);
-        const safeProfile = { ...currentUser };
-        if (registryIndex >= 0) usersRegistry[registryIndex] = safeProfile; else usersRegistry.push(safeProfile);
-        saveUsersRegistry();
+
+        selectedSubjectFilter = 'All';
+        selectedStatusFilter = 'All';
+        selectedPriorityFilter = 'All';
+        searchQuery = '';
+
         loadSubjects();
         loadTasks();
         const localTasks = tasks.slice();
+
         if (remote && remote.user) {
-          if (Array.isArray(remote.subjects)) SUBJECTS = remote.subjects;
+          if (Array.isArray(remote.subjects)) SUBJECTS = sanitizeSubjects(remote.subjects);
           if (Array.isArray(remote.tasks)) {
             const localImages = new Map(localTasks.filter(t => t.imageData).map(t => [t.id, t.imageData]));
-            tasks = remote.tasks.map(t => ({ ...t, imageData: localImages.get(t.id) || '' }));
+            tasks = sanitizeTasks(remote.tasks).map(t => ({ ...t, imageData: localImages.get(t.id) || '' }));
           }
         }
         try {
           localStorage.setItem(getSubjectsStorageKey(), JSON.stringify(SUBJECTS));
           localStorage.setItem(getTasksStorageKey(), JSON.stringify(tasks));
         } catch (e) { console.warn('Could not cache account data locally:', e); }
-        pendingFirebaseProfile = null;
-        renderSubjectDropdown(); resetFormState(); updateCurrentUserHeaderUI(); renderAll(); showDashboardView();
+
+        pendingSignupName = null;
+        renderSubjectDropdown();
+        resetFormState();
+        updateCurrentUserHeaderUI();
+        updateCloudIndicatorUI();
+        renderAll();
+        showDashboardView();
       } finally {
         cloudWritesPaused = false;
       }
       await pushCurrentUserToCloud();
-      renderSavedUsersPills();
     }
 
-    // Firebase browser configuration. Firebase security is enforced by Authentication + database rules.
-    const firebaseConfig = {
-      apiKey: 'AIzaSyB7UB04x3Jd484Hdf9NKroWtmuuAMeDEeM',
-      authDomain: 'assignment-tracker-d8f2b.firebaseapp.com',
-      databaseURL: 'https://assignment-tracker-d8f2b-default-rtdb.asia-southeast1.firebasedatabase.app',
-      projectId: 'assignment-tracker-d8f2b',
-      storageBucket: 'assignment-tracker-d8f2b.firebasestorage.app',
-      messagingSenderId: '87885100301',
-      appId: '1:87885100301:web:c577be5d561a71b6a46c44'
-    };
-    if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
-
-    // Starts empty — user will create their own account / User ID!
-    let usersRegistry = [];
-    let currentUser = null;
-
+    // ------------------------------------------------------------------
+    // Local storage (per account)
+    // ------------------------------------------------------------------
     function getTasksStorageKey() {
-      const uid = currentUser && (currentUser.uid || currentUser.userId) ? (currentUser.uid || currentUser.userId) : 'guest';
+      const uid = currentUser && currentUser.uid ? currentUser.uid : 'guest';
       return `college_tasks_user_${uid}`;
     }
-
     function getSubjectsStorageKey() {
-      const uid = currentUser && (currentUser.uid || currentUser.userId) ? (currentUser.uid || currentUser.userId) : 'guest';
+      const uid = currentUser && currentUser.uid ? currentUser.uid : 'guest';
       return `college_subjects_zero_${uid}`;
     }
 
-    function loadUsersRegistry() {
+    let tasks = [];
+    let selectedSubjectFilter = 'All';
+    let selectedStatusFilter = 'All';
+    let selectedPriorityFilter = 'All';
+    let currentSortOrder = 'dueAsc';
+    let searchQuery = '';
+    let currentUploadedImageBase64 = '';
+
+    function loadSubjects() {
       try {
-        const rawUsers = localStorage.getItem(USERS_REGISTRY_KEY);
-        if (rawUsers !== null) {
-          const parsed = JSON.parse(rawUsers);
-          if (Array.isArray(parsed)) {
-            usersRegistry = parsed.map(({ pin, password, ...safeUser }) => safeUser);
-          }
+        const raw = localStorage.getItem(getSubjectsStorageKey());
+        if (raw !== null) {
+          SUBJECTS = sanitizeSubjects(JSON.parse(raw));
+          return;
         }
-        // A locally saved account is never treated as authenticated; Firebase Auth is required.
-        currentUser = null;
-      } catch (err) {
-        console.warn('User registry load error:', err);
-      }
+      } catch (err) { console.warn('Failed to load subjects:', err); }
+      SUBJECTS = [];
     }
 
-    function saveUsersRegistry() {
-      try {
-        localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(usersRegistry));
-        if (currentUser && currentUser.userId) {
-          localStorage.setItem(ACTIVE_USER_KEY, currentUser.userId);
-        } else {
-          localStorage.removeItem(ACTIVE_USER_KEY);
-        }
-      } catch (err) {
-        console.warn('User registry save error:', err);
-      }
+    function saveSubjects() {
+      try { localStorage.setItem(getSubjectsStorageKey(), JSON.stringify(SUBJECTS)); }
+      catch (err) { console.warn('Failed to save subjects:', err); }
+      scheduleCloudPush();
     }
 
+    function loadTasks() {
+      try {
+        const raw = localStorage.getItem(getTasksStorageKey());
+        if (raw !== null) {
+          tasks = sanitizeTasks(JSON.parse(raw));
+          return;
+        }
+      } catch (err) { console.warn('Failed to load tasks:', err); }
+      tasks = [];
+    }
+
+    function saveTasks() {
+      const key = getTasksStorageKey();
+      try {
+        localStorage.setItem(key, JSON.stringify(tasks));
+      } catch (err) {
+        console.warn('LocalStorage full, saving without large photos:', err);
+        try {
+          const lightCopy = tasks.map(t => ({ ...t, imageData: (t.imageData && t.imageData.length > 35000) ? '' : t.imageData }));
+          localStorage.setItem(key, JSON.stringify(lightCopy));
+          showToast('Storage full: some large photos were not saved locally');
+        } catch (innerErr) { console.error('LocalStorage unavailable:', innerErr); }
+      }
+      scheduleCloudPush();
+    }
+
+    // ------------------------------------------------------------------
+    // View switching
+    // ------------------------------------------------------------------
     function updateCurrentUserHeaderUI() {
       const badge = document.getElementById('currentUserBadgeText');
       const wsLabel = document.getElementById('workspaceOwnerLabel');
       const closeBtn = document.getElementById('closeAuthModalBtn');
-      if (currentUser && currentUser.userId) {
+      if (currentUser && currentUser.uid) {
         if (badge) badge.textContent = `${currentUser.name} (@${currentUser.userId})`;
         if (wsLabel) wsLabel.textContent = `• ${currentUser.name}'s Workspace`;
         if (closeBtn) closeBtn.classList.remove('hidden');
-      } else {
-        if (closeBtn) closeBtn.classList.add('hidden');
+      } else if (closeBtn) {
+        closeBtn.classList.add('hidden');
       }
     }
 
@@ -1084,129 +921,12 @@
     function showLoginGateView() {
       document.getElementById('appDashboardWrapper').classList.add('hidden');
       document.getElementById('authModal').classList.remove('hidden');
-      renderSavedUsersPills();
       updateCurrentUserHeaderUI();
     }
 
-    const SAMPLE_DIAGRAM_DATA_URI = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="600" height="320" viewBox="0 0 600 320">
-        <rect width="600" height="320" fill="#f8fafc"/>
-        <rect x="20" y="20" width="560" height="280" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-        <text x="45" y="65" fill="#0f172a" font-family="sans-serif" font-size="20" font-weight="bold">C Language Practical Note</text>
-        <text x="45" y="110" fill="#334155" font-family="monospace" font-size="15">for (int i = 0; i &lt; n; i++) {</text>
-        <text x="70" y="140" fill="#0284c7" font-family="monospace" font-size="15">printf("%d ", *(ptr + i));</text>
-        <text x="45" y="170" fill="#334155" font-family="monospace" font-size="15">}</text>
-        <text x="45" y="240" fill="#64748b" font-family="sans-serif" font-size="13">Attached Homework Reference Image</text>
-      </svg>
-    `);
-
-    function getDefaultSampleTasks() {
-      // Sample data removed as requested — starts at 0 assignments!
-      return [];
-    }
-
-    let tasks = [];
-    let selectedSubjectFilter = 'All';
-    let selectedStatusFilter = 'All';
-    let selectedPriorityFilter = 'All';
-    let currentSortOrder = 'dueAsc';
-    let searchQuery = '';
-    let currentUploadedImageBase64 = '';
-
-    // Pomodoro state
-    let timerSeconds = 25 * 60;
-    let timerRunning = false;
-    let timerInterval = null;
-    let timerMode = 'focus';
-
-    function loadSubjects() {
-      const key = getSubjectsStorageKey();
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw !== null) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            SUBJECTS = parsed;
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load subjects:', err);
-      }
-      SUBJECTS = getDefaultSubjects();
-      saveSubjects();
-    }
-
-    function saveSubjects() {
-      const key = getSubjectsStorageKey();
-      try {
-        localStorage.setItem(key, JSON.stringify(SUBJECTS));
-      } catch (err) {
-        console.warn('Failed to save subjects:', err);
-      }
-      scheduleCloudPush();
-    }
-
-    function loadTasks() {
-      const key = getTasksStorageKey();
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw !== null) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            tasks = parsed;
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load tasks:', err);
-      }
-      // Default sample tasks only for default @piyush account on first run; new student accounts start clean!
-      tasks = currentUser.userId === 'piyush' ? getDefaultSampleTasks() : [];
-      saveTasks();
-    }
-
-    function saveTasks() {
-      const key = getTasksStorageKey();
-      try {
-        localStorage.setItem(key, JSON.stringify(tasks));
-      } catch (err) {
-        console.warn('LocalStorage save error, fallback to light data:', err);
-        try {
-          const lightCopy = tasks.map(t => ({
-            ...t,
-            imageData: (t.imageData && t.imageData.length > 35000) ? '' : t.imageData
-          }));
-          localStorage.setItem(key, JSON.stringify(lightCopy));
-        } catch (innerErr) {
-          console.error('LocalStorage unavailable:', innerErr);
-        }
-      }
-      scheduleCloudPush();
-    }
-
-    function switchActiveUser(userObj) {
-      currentUser = userObj;
-      saveUsersRegistry();
-      selectedSubjectFilter = 'All';
-      selectedStatusFilter = 'All';
-      selectedPriorityFilter = 'All';
-      searchQuery = '';
-      loadSubjects();
-      loadTasks();
-      renderSubjectDropdown();
-      resetFormState();
-      updateCurrentUserHeaderUI();
-      renderAll();
-      showDashboardView();
-    }
-
-    function renderSavedUsersPills() {
-      const box = document.getElementById('savedUsersList');
-      if (!box) return;
-      box.innerHTML = '<span class="text-xs text-slate-400 dark:text-slate-500">Use your Firebase email and password to sign in. Local account shortcuts are disabled for security.</span>';
-    }
-
+    // ------------------------------------------------------------------
+    // Rendering
+    // ------------------------------------------------------------------
     function renderSubjectDropdown() {
       const select = document.getElementById('taskSubject');
       const currentVal = select.value;
@@ -1214,49 +934,31 @@
         select.innerHTML = '<option value="General">General</option>';
         return;
       }
-      select.innerHTML = SUBJECTS.map(subj =>
-        `<option value="${escapeHtml(subj.name)}">${escapeHtml(subj.name)}</option>`
-      ).join('');
-      if (SUBJECTS.some(s => s.name === currentVal)) {
-        select.value = currentVal;
-      }
+      select.innerHTML = SUBJECTS.map(subj => `<option value="${escapeHtml(subj.name)}">${escapeHtml(subj.name)}</option>`).join('');
+      if (SUBJECTS.some(s => s.name === currentVal)) select.value = currentVal;
     }
 
     function getPriorityBadge(priority) {
-      if (priority === 'High') {
-        return '<span class="text-[11px] font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-md">High</span>';
-      }
-      if (priority === 'Medium') {
-        return '<span class="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md">Medium</span>';
-      }
+      if (priority === 'High') return '<span class="text-[11px] font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded-md">High</span>';
+      if (priority === 'Medium') return '<span class="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md">Medium</span>';
       return '<span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Low</span>';
     }
 
     function formatReadableDate(dateStr) {
       if (!dateStr) return 'No Date';
-      const parts = dateStr.split('-');
-      if (parts.length !== 3) return dateStr;
-      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      return dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      const d = parseLocalDate(dateStr);
+      if (!d) return dateStr;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
     }
 
     function getDeadlineCountdownBadge(dueDateStr, status) {
       if (status === 'Completed' || !dueDateStr) return '';
-      const today = new Date('2026-10-15T00:00:00');
-      const parts = dueDateStr.split('-');
-      if (parts.length !== 3) return '';
-      const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 0) {
-        return `<span class="text-[11px] font-semibold text-rose-600 dark:text-rose-400">Overdue</span>`;
-      }
-      if (diffDays === 0) {
-        return '<span class="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Due Today</span>';
-      }
-      if (diffDays <= 3) {
-        return `<span class="text-[11px] text-slate-500 dark:text-slate-400">${diffDays}d left</span>`;
-      }
+      const diffDays = daysUntil(dueDateStr);
+      if (diffDays === null) return '';
+      if (diffDays < 0) return `<span class="text-[11px] font-semibold text-rose-600 dark:text-rose-400">Overdue</span>`;
+      if (diffDays === 0) return '<span class="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Due Today</span>';
+      if (diffDays === 1) return '<span class="text-[11px] text-slate-500 dark:text-slate-400">Due Tomorrow</span>';
+      if (diffDays <= 3) return `<span class="text-[11px] text-slate-500 dark:text-slate-400">${diffDays}d left</span>`;
       return '';
     }
 
@@ -1279,40 +981,31 @@
       const container = document.getElementById('subjectPillsContainer');
       const manageContainer = document.getElementById('subjectManageList');
       const hint = document.getElementById('activeSubjectHint');
-      hint.textContent = selectedSubjectFilter === 'All'
-        ? 'All Subjects'
-        : selectedSubjectFilter;
+      hint.textContent = selectedSubjectFilter === 'All' ? 'All Subjects' : selectedSubjectFilter;
 
       const allActive = selectedSubjectFilter === 'All';
       let pillsHtml = `
         <button type="button" data-subject="All" class="subject-pill-btn px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
-          allActive
-            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700'
+          allActive ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700'
         }">
           <span>All</span>
           <span class="text-[11px] opacity-75">${tasks.length}</span>
-        </button>
-      `;
+        </button>`;
 
       SUBJECTS.forEach(subj => {
         const count = tasks.filter(t => t.subject === subj.name).length;
         const isActive = selectedSubjectFilter === subj.name;
         pillsHtml += `
           <button type="button" data-subject="${escapeHtml(subj.name)}" class="subject-pill-btn px-3 py-1.5 rounded-xl text-xs font-medium border transition flex items-center gap-1.5 ${
-            isActive
-              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs'
-              : `${subj.badgeBg} ${subj.badgeText} ${subj.badgeBorder} hover:opacity-85`
+            isActive ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-sm' : `${subj.badgeBg} ${subj.badgeText} ${subj.badgeBorder} hover:opacity-85`
           }">
             <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-current' : subj.dot}"></span>
             <span>${escapeHtml(subj.name)}</span>
             <span class="text-[11px] opacity-70">${count}</span>
-          </button>
-        `;
+          </button>`;
       });
 
       container.innerHTML = pillsHtml;
-
       container.querySelectorAll('.subject-pill-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           selectedSubjectFilter = btn.getAttribute('data-subject');
@@ -1320,7 +1013,6 @@
         });
       });
 
-      // Populate Manage Subjects List (Edit & Remove for EVERY subject)
       if (SUBJECTS.length === 0) {
         manageContainer.innerHTML = '<p class="text-xs text-slate-400 col-span-full">No subjects added yet. Use the form above to add your first subject.</p>';
       } else {
@@ -1331,36 +1023,16 @@
               <span class="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">${escapeHtml(subj.name)}</span>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                data-edit-subject="${escapeHtml(subj.name)}"
-                class="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 px-2 py-1 rounded-md transition"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                data-delete-subject="${escapeHtml(subj.name)}"
-                class="text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 px-2 py-1 rounded-md transition"
-              >
-                Remove
-              </button>
+              <button type="button" data-edit-subject="${escapeHtml(subj.name)}" class="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 px-2 py-1 rounded-md transition">Edit</button>
+              <button type="button" data-delete-subject="${escapeHtml(subj.name)}" class="text-[11px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 px-2 py-1 rounded-md transition">Remove</button>
             </div>
-          </div>
-        `).join('');
+          </div>`).join('');
 
         manageContainer.querySelectorAll('button[data-edit-subject]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const subjName = btn.getAttribute('data-edit-subject');
-            startEditSubject(subjName);
-          });
+          btn.addEventListener('click', () => startEditSubject(btn.getAttribute('data-edit-subject')));
         });
-
         manageContainer.querySelectorAll('button[data-delete-subject]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const subjName = btn.getAttribute('data-delete-subject');
-            removeSubject(subjName);
-          });
+          btn.addEventListener('click', () => removeSubject(btn.getAttribute('data-delete-subject')));
         });
       }
     }
@@ -1385,10 +1057,13 @@
     }
 
     function removeSubject(subjName) {
+      const used = tasks.filter(t => t.subject === subjName).length;
+      const msg = used > 0
+        ? `Remove subject "${subjName}"? ${used} assignment(s) will keep this name but lose its color.`
+        : `Remove subject "${subjName}"?`;
+      if (!confirm(msg)) return;
       SUBJECTS = SUBJECTS.filter(s => s.name !== subjName);
-      if (selectedSubjectFilter === subjName) {
-        selectedSubjectFilter = 'All';
-      }
+      if (selectedSubjectFilter === subjName) selectedSubjectFilter = 'All';
       saveSubjects();
       renderSubjectDropdown();
       resetSubjectForm();
@@ -1399,7 +1074,6 @@
     function renderTasksList() {
       const container = document.getElementById('assignmentsListContainer');
       const countBadge = document.getElementById('filteredCountBadge');
-
       const priorityRank = { High: 3, Medium: 2, Low: 1 };
 
       const filtered = tasks.filter(task => {
@@ -1408,20 +1082,16 @@
         if (selectedPriorityFilter !== 'All' && task.priority !== selectedPriorityFilter) return false;
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase();
-          const matchTitle = (task.title || '').toLowerCase().includes(q);
-          const matchSubj = (task.subject || '').toLowerCase().includes(q);
-          const matchNotes = (task.notes || '').toLowerCase().includes(q);
-          if (!matchTitle && !matchSubj && !matchNotes) return false;
+          const hit = (task.title || '').toLowerCase().includes(q)
+            || (task.subject || '').toLowerCase().includes(q)
+            || (task.notes || '').toLowerCase().includes(q);
+          if (!hit) return false;
         }
         return true;
       }).sort((a, b) => {
-        if (currentSortOrder === 'dueAsc') {
-          return (a.dueDate || '9999-99-99').localeCompare(b.dueDate || '9999-99-99');
-        }
-        if (currentSortOrder === 'priorityDesc') {
-          return (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
-        }
-        return 0;
+        if (currentSortOrder === 'dueAsc') return (a.dueDate || '9999-99-99').localeCompare(b.dueDate || '9999-99-99');
+        if (currentSortOrder === 'priorityDesc') return (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
+        return 0; // "newest": tasks are stored newest-first
       });
 
       countBadge.textContent = filtered.length;
@@ -1429,43 +1099,32 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="text-center py-10">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">No assignments yet. Add your first assignment above!</p>
-          </div>
-        `;
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">${tasks.length === 0 ? 'No assignments yet. Add your first assignment above!' : 'No assignments match these filters.'}</p>
+          </div>`;
         return;
       }
 
       container.innerHTML = filtered.map(task => {
         const subjStyle = getSubjectStyle(task.subject);
         const isCompleted = task.status === 'Completed';
+        const tid = escapeHtml(task.id);
 
         return `
           <div class="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
-            <!-- Left: Checkbox + Title + Meta -->
             <div class="flex items-start gap-3 min-w-0">
-              <button
-                type="button"
-                data-action="toggle"
-                data-id="${task.id}"
-                title="Mark as ${isCompleted ? 'Pending' : 'Completed'}"
+              <button type="button" data-action="toggle" data-id="${tid}" title="Mark as ${isCompleted ? 'Pending' : 'Completed'}"
                 class="mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition ${
-                  isCompleted
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                    : 'border-slate-300 dark:border-slate-600 hover:border-indigo-500 bg-white dark:bg-slate-800'
-                }"
-              >
+                  isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-500 bg-white dark:bg-slate-800'
+                }">
                 ${isCompleted ? `
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ` : ''}
+                  </svg>` : ''}
               </button>
 
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="text-sm font-semibold ${isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'}">
-                    ${escapeHtml(task.title)}
-                  </h3>
+                  <h3 class="text-sm font-semibold ${isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'}">${escapeHtml(task.title)}</h3>
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border ${subjStyle.badgeBg} ${subjStyle.badgeText} ${subjStyle.badgeBorder}">
                     <span class="w-1.5 h-1.5 rounded-full ${subjStyle.dot}"></span>
                     ${escapeHtml(task.subject)}
@@ -1474,65 +1133,35 @@
                   ${getDeadlineCountdownBadge(task.dueDate, task.status)}
                 </div>
 
-                ${task.notes ? `
-                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${escapeHtml(task.notes)}</p>
-                ` : ''}
+                ${task.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${escapeHtml(task.notes)}</p>` : ''}
 
                 ${task.imageData ? `
-                  <button
-                    type="button"
-                    data-action="view-image"
-                    data-id="${task.id}"
-                    class="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                  >
-                    <img src="${task.imageData}" alt="Note" class="w-6 h-6 object-cover rounded border border-slate-200 dark:border-slate-700" />
+                  <button type="button" data-action="view-image" data-id="${tid}" class="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <img src="${escapeHtml(task.imageData)}" alt="Note" class="w-6 h-6 object-cover rounded border border-slate-200 dark:border-slate-700" />
                     <span>View Photo</span>
-                  </button>
-                ` : ''}
+                  </button>` : ''}
               </div>
             </div>
 
-            <!-- Right: Due Date & Minimal Actions -->
             <div class="flex items-center justify-between sm:justify-end gap-3 pl-8 sm:pl-0 shrink-0">
-              <span class="text-xs text-slate-500 dark:text-slate-400">
-                Due ${formatReadableDate(task.dueDate)}
-              </span>
-
+              <span class="text-xs text-slate-500 dark:text-slate-400">Due ${escapeHtml(formatReadableDate(task.dueDate))}</span>
               <div class="flex items-center gap-1">
-                <button
-                  type="button"
-                  data-action="toggle"
-                  data-id="${task.id}"
-                  class="text-[11px] font-medium px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                >
+                <button type="button" data-action="toggle" data-id="${tid}" class="text-[11px] font-medium px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                   ${isCompleted ? 'Pending' : 'Done'}
                 </button>
-                <button
-                  type="button"
-                  data-action="edit"
-                  data-id="${task.id}"
-                  title="Edit"
-                  class="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                >
+                <button type="button" data-action="edit" data-id="${tid}" title="Edit" class="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <button
-                  type="button"
-                  data-action="delete"
-                  data-id="${task.id}"
-                  title="Delete"
-                  class="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                >
+                <button type="button" data-action="delete" data-id="${tid}" title="Delete" class="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               </div>
             </div>
-          </div>
-        `;
+          </div>`;
       }).join('');
 
       container.querySelectorAll('button[data-action]').forEach(btn => {
@@ -1565,6 +1194,9 @@
     }
 
     function deleteTask(id) {
+      const item = tasks.find(t => t.id === id);
+      if (!item) return;
+      if (!confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
       tasks = tasks.filter(t => t.id !== id);
       saveTasks();
       renderAll();
@@ -1579,6 +1211,7 @@
       document.getElementById('taskTitle').value = item.title;
       if (!SUBJECTS.some(s => s.name === item.subject)) {
         SUBJECTS.push({ name: item.subject, ...COLOR_PALETTES.blue });
+        saveSubjects();
         renderSubjectDropdown();
       }
       document.getElementById('taskSubject').value = item.subject;
@@ -1600,7 +1233,6 @@
       const previewBox = document.getElementById('imagePreviewBox');
       const previewImg = document.getElementById('formImagePreview');
       const labelText = document.getElementById('uploadLabelText');
-
       if (currentUploadedImageBase64) {
         previewImg.src = currentUploadedImageBase64;
         previewBox.classList.remove('hidden');
@@ -1620,7 +1252,8 @@
         ? selectedSubjectFilter
         : (SUBJECTS[0]?.name || 'General');
       document.getElementById('taskSubject').value = defaultSubj;
-      document.getElementById('taskDueDate').value = '2026-10-22';
+      // Due date defaults to TODAY (real current date) and can be changed freely.
+      document.getElementById('taskDueDate').value = todayStr();
       document.getElementById('taskPriority').value = 'Medium';
       document.getElementById('taskStatus').value = 'Pending';
       document.getElementById('taskNotes').value = '';
@@ -1642,65 +1275,80 @@
     function handleImageFileUpload(file) {
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(evt) {
+      reader.onload = function (evt) {
         const img = new Image();
-        img.onload = function() {
+        img.onload = function () {
           const maxDim = 480;
-          let w = img.width;
-          let h = img.height;
+          let w = img.width, h = img.height;
           if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
+            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
           }
           const canvas = document.createElement('canvas');
           canvas.width = w;
           canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          // High efficiency compression for instant LocalStorage saving (~20KB)
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           currentUploadedImageBase64 = canvas.toDataURL('image/jpeg', 0.65);
           updateFormImagePreviewUI();
           showToast('Photo attached');
         };
+        img.onerror = () => showToast('Could not read this image');
         img.src = evt.target.result;
       };
       reader.readAsDataURL(file);
     }
 
+    // ------------------------------------------------------------------
+    // Pomodoro timer (based on end timestamp, so it stays accurate in background tabs)
+    // ------------------------------------------------------------------
+    let timerSeconds = 25 * 60;
+    let timerRunning = false;
+    let timerInterval = null;
+    let timerMode = 'focus';
+    let timerEndAt = 0;
+
     function updatePomodoroUI() {
       const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
       const secs = String(timerSeconds % 60).padStart(2, '0');
       document.getElementById('pomodoroDisplay').textContent = `${mins}:${secs}`;
-      document.getElementById('timerStartPauseBtn').textContent = timerRunning ? 'Pause Timer' : 'Start Focus';
+      document.getElementById('timerStartPauseBtn').textContent = timerRunning ? 'Pause Timer' : (timerMode === 'focus' ? 'Start Focus' : 'Start Break');
     }
 
+    function timerTick() {
+      timerSeconds = Math.max(0, Math.ceil((timerEndAt - Date.now()) / 1000));
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        showToast(timerMode === 'focus' ? 'Focus session complete! Take a break.' : 'Break complete! Back to work.');
+      }
+      updatePomodoroUI();
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerRunning = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Study coach
+    // ------------------------------------------------------------------
     const GEMINI_API_KEY_STORAGE = 'college_student_gemini_api_key_v1';
+    // If Google retires this model, change the name here (see ai.google.dev/gemini-api/docs/models).
+    const GEMINI_MODEL = 'gemini-2.5-flash';
     let cachedStudyPlanText = '';
 
-    function getTaskUrgencyScore(task, today) {
+    function getTaskUrgencyScore(task) {
       const priorityWeights = { High: 100, Medium: 50, Low: 20 };
       const pWeight = priorityWeights[task.priority] || 20;
-      if (!task.dueDate) return pWeight;
-      const parts = task.dueDate.split('-');
-      if (parts.length !== 3) return pWeight;
-      const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
-      // Closer deadlines have higher urgency
-      return pWeight - (diffDays * 12);
+      const diffDays = daysUntil(task.dueDate);
+      if (diffDays === null) return pWeight;
+      return pWeight - (diffDays * 12); // closer deadline = higher urgency
     }
 
+    // Returns plain text (escaping happens at render time).
     function analyzeTaskContext(task) {
-      const title = (task.title || '').toLowerCase();
-      const notes = (task.notes || '').toLowerCase();
-      const subject = (task.subject || '').toLowerCase();
-      const text = `${title} ${notes} ${subject}`;
+      const text = `${task.title || ''} ${task.notes || ''} ${task.subject || ''}`.toLowerCase();
 
-      // 1. Programming & Coding (C, C++, Java, Python, Loops, Variables, DSA, etc.)
       if (text.includes('c language') || text.includes('c++') || text.includes('java') || text.includes('python') || text.includes('code') || text.includes('coding') || text.includes('program') || text.includes('loop') || text.includes('variable') || text.includes('pointer') || text.includes('array') || text.includes('function') || text.includes('syntax') || text.includes('dsa') || text.includes('structure')) {
         if (text.includes('loop') || text.includes('variable')) {
           return {
@@ -1735,9 +1383,8 @@
         };
       }
 
-      // 2. PC Software, Excel, Shortcuts, Office tools
-      if (text.includes('excel') || text.includes('shortcut') || text.includes('key') || text.includes('sheet') || text.includes('pc software') || text.includes('word') || text.includes('powerpoint') || text.includes('ppt') || text.includes('office')) {
-        if (text.includes('shortcut') || text.includes('key') || text.includes('excel')) {
+      if (text.includes('excel') || text.includes('shortcut') || text.includes('sheet') || text.includes('pc software') || text.includes('word') || text.includes('powerpoint') || text.includes('ppt') || text.includes('office')) {
+        if (text.includes('shortcut') || text.includes('excel')) {
           return {
             tag: '📊 PC Software • Hands-On Excel & Shortcut Drill',
             badgeBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
@@ -1759,7 +1406,6 @@
         };
       }
 
-      // 3. Mathematics, Numericals, Physics, Calculations
       if (text.includes('math') || text.includes('numerical') || text.includes('physics') || text.includes('stat') || text.includes('account') || text.includes('formula') || text.includes('calculate') || text.includes('theorem')) {
         return {
           tag: '📐 Problem Solving & Numericals Drill',
@@ -1772,7 +1418,6 @@
         };
       }
 
-      // 4. Lab, Practical, Record File
       if (text.includes('lab') || text.includes('practical') || text.includes('record') || text.includes('file') || text.includes('experiment')) {
         return {
           tag: '🧪 Practical & Lab File Preparation',
@@ -1785,7 +1430,6 @@
         };
       }
 
-      // 5. Revision, Active Recall, Exam / Quiz / Test Prep
       if (text.includes('revision') || text.includes('revise') || text.includes('yaad') || text.includes('padhna') || text.includes('exam') || text.includes('test') || text.includes('viva') || text.includes('quiz')) {
         return {
           tag: '📝 Active Recall Revision Strategy',
@@ -1798,7 +1442,6 @@
         };
       }
 
-      // 6. Project, Presentation, Seminar, Report
       if (text.includes('project') || text.includes('presentation') || text.includes('seminar') || text.includes('report') || text.includes('slide')) {
         return {
           tag: '📑 Project & Presentation Milestone',
@@ -1811,12 +1454,11 @@
         };
       }
 
-      // 7. Dynamic Smart Topic Fallback
       return {
-        tag: `🎯 Focused Study: ${escapeHtml(task.title)}`,
+        tag: `🎯 Focused Study: ${task.title}`,
         badgeBg: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
         steps: [
-          `Review core class notes and syllabus objectives for ${escapeHtml(task.subject || 'this subject')}.`,
+          `Review core class notes and syllabus objectives for ${task.subject || 'this subject'}.`,
           'Start a 25-minute Pomodoro study block to draft your answers or complete the assignment.',
           'Review final work and check off key requirements before marking as Completed.'
         ]
@@ -1838,28 +1480,18 @@
             <span class="text-3xl">🎉</span>
             <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200">Zero Pending Assignments!</h4>
             <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Awesome work! All assignments in your student workspace are completed (${completedTasks.length} done). Use this free time to take a break or add your next homework above.
+              Awesome work! All assignments in your workspace are completed (${completedTasks.length} done). Use this free time to take a break or add your next homework.
             </p>
-          </div>
-        `;
+          </div>`;
         if (startTimerBtn) startTimerBtn.classList.add('hidden');
         return;
       }
 
       if (startTimerBtn) startTimerBtn.classList.remove('hidden');
 
-      const today = new Date('2026-10-19T00:00:00'); // Consistent reference point with system
-      
-      // Calculate Urgency & Sort
       const scoredTasks = pendingTasks.map(t => {
-        const parts = (t.dueDate || '').split('-');
-        let diffDays = 999;
-        if (parts.length === 3) {
-          const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-          diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
-        }
-        const urgencyScore = getTaskUrgencyScore(t, today);
-        return { ...t, diffDays, urgencyScore };
+        const d = daysUntil(t.dueDate);
+        return { ...t, diffDays: d === null ? 999 : d, urgencyScore: getTaskUrgencyScore(t) };
       }).sort((a, b) => b.urgencyScore - a.urgencyScore);
 
       const overdueCount = scoredTasks.filter(t => t.diffDays < 0).length;
@@ -1867,11 +1499,9 @@
       const dueNext3DaysCount = scoredTasks.filter(t => t.diffDays > 0 && t.diffDays <= 3).length;
       const highPriorityCount = scoredTasks.filter(t => t.priority === 'High').length;
 
-      // Extract unique top subjects for personalized coach advice
       const topSubjectNames = [...new Set(scoredTasks.slice(0, 3).map(t => t.subject).filter(Boolean))];
       const subjectsMention = topSubjectNames.length > 0 ? ` focused on <strong>${escapeHtml(topSubjectNames.join(' & '))}</strong>` : '';
 
-      // Status Assessment
       let statusColor = 'border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/50 dark:bg-indigo-950/30';
       let statusBadge = '<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">Balanced Pace</span>';
       let statusMessage = `You have <strong>${pendingTasks.length} active assignments</strong>${subjectsMention}. Follow the targeted action steps below to finish smoothly.`;
@@ -1886,9 +1516,8 @@
         statusMessage = `You have high-priority work due soon${subjectsMention}. Complete the top sequence in 25-minute Pomodoro sessions.`;
       }
 
-      // Build Top Tasks Breakdown
       let sequenceHtml = '';
-      let planTextLines = ['=== Smart Study Action Plan ===', `Pending Assignments: ${pendingTasks.length}`, ''];
+      const planTextLines = ['=== Smart Study Action Plan ===', `Pending Assignments: ${pendingTasks.length}`, ''];
 
       scoredTasks.slice(0, 4).forEach((task, idx) => {
         const subjStyle = getSubjectStyle(task.subject);
@@ -1897,15 +1526,11 @@
         else if (task.priority === 'Low') timeRecommend = '15-20 mins Quick Finish';
 
         let deadlineBadge = '';
-        if (task.diffDays < 0) {
-          deadlineBadge = `<span class="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 rounded-md">Overdue (${Math.abs(task.diffDays)}d)</span>`;
-        } else if (task.diffDays === 0) {
-          deadlineBadge = `<span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md">Due Today!</span>`;
-        } else {
-          deadlineBadge = `<span class="text-[11px] text-slate-500 dark:text-slate-400">Due in ${task.diffDays}d (${formatReadableDate(task.dueDate)})</span>`;
-        }
+        if (task.diffDays < 0) deadlineBadge = `<span class="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 rounded-md">Overdue (${Math.abs(task.diffDays)}d)</span>`;
+        else if (task.diffDays === 0) deadlineBadge = `<span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md">Due Today!</span>`;
+        else if (task.diffDays === 999) deadlineBadge = `<span class="text-[11px] text-slate-500 dark:text-slate-400">No due date</span>`;
+        else deadlineBadge = `<span class="text-[11px] text-slate-500 dark:text-slate-400">Due in ${task.diffDays}d (${escapeHtml(formatReadableDate(task.dueDate))})</span>`;
 
-        // Deep Domain Analysis
         const analysis = analyzeTaskContext(task);
 
         planTextLines.push(`Step ${idx + 1}: [${task.priority}] ${task.title} (${task.subject})`);
@@ -1919,27 +1544,17 @@
 
         const stepsHtml = analysis.steps.map((step, sIdx) => `
           <div class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-            <span class="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-              ${sIdx + 1}
-            </span>
+            <span class="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">${sIdx + 1}</span>
             <span>${escapeHtml(step)}</span>
-          </div>
-        `).join('');
+          </div>`).join('');
 
         sequenceHtml += `
-          <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-3">
-            <!-- Header Row -->
+          <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
-                <span class="w-6 h-6 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                  ${idx + 1}
-                </span>
-                <span class="text-sm font-bold text-slate-900 dark:text-white">
-                  ${escapeHtml(task.title)}
-                </span>
-                <span class="text-[11px] font-medium px-2 py-0.5 rounded-md border ${subjStyle.badgeBg} ${subjStyle.badgeText} ${subjStyle.badgeBorder}">
-                  ${escapeHtml(task.subject)}
-                </span>
+                <span class="w-6 h-6 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold flex items-center justify-center shrink-0">${idx + 1}</span>
+                <span class="text-sm font-bold text-slate-900 dark:text-white">${escapeHtml(task.title)}</span>
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded-md border ${subjStyle.badgeBg} ${subjStyle.badgeText} ${subjStyle.badgeBorder}">${escapeHtml(task.subject)}</span>
               </div>
               <div class="flex items-center gap-2">
                 ${getPriorityBadge(task.priority)}
@@ -1947,39 +1562,26 @@
               </div>
             </div>
 
-            <!-- Context Badge & Recommended Session -->
             <div class="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-              <span class="font-semibold px-2 py-0.5 rounded-md border ${analysis.badgeBg}">
-                ${analysis.tag}
-              </span>
-              <span class="text-slate-500 dark:text-slate-400">
-                ⏱ Recommended: <strong class="text-purple-600 dark:text-purple-400">${timeRecommend}</strong>
-              </span>
+              <span class="font-semibold px-2 py-0.5 rounded-md border ${analysis.badgeBg}">${escapeHtml(analysis.tag)}</span>
+              <span class="text-slate-500 dark:text-slate-400">⏱ Recommended: <strong class="text-purple-600 dark:text-purple-400">${timeRecommend}</strong></span>
             </div>
 
             ${task.notes ? `
               <div class="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
                 <strong>Your Notes:</strong> "${escapeHtml(task.notes)}"
-              </div>
-            ` : ''}
+              </div>` : ''}
 
-            <!-- Smart 3-Step Action Plan -->
             <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-2">
-              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Targeted Action Steps:
-              </p>
-              <div class="space-y-1.5">
-                ${stepsHtml}
-              </div>
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Targeted Action Steps:</p>
+              <div class="space-y-1.5">${stepsHtml}</div>
             </div>
-          </div>
-        `;
+          </div>`;
       });
 
       cachedStudyPlanText = planTextLines.join('\n');
 
       container.innerHTML = `
-        <!-- Workload Status Header Card -->
         <div class="p-4 rounded-xl border ${statusColor} space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-slate-900 dark:text-white">Today's Study Overview</span>
@@ -1995,27 +1597,20 @@
           </div>
         </div>
 
-        <!-- Prioritized Sequence -->
         <div class="space-y-2.5">
           <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Recommended Focus Sequence:
-            </h4>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recommended Focus Sequence:</h4>
             <span class="text-[11px] text-slate-400">Showing top ${Math.min(4, scoredTasks.length)} tasks</span>
           </div>
-          <div class="space-y-3">
-            ${sequenceHtml}
-          </div>
+          <div class="space-y-3">${sequenceHtml}</div>
         </div>
 
-        <!-- Strategy Tip Box -->
         <div class="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/80 flex items-start gap-2.5">
           <span class="text-base shrink-0">💡</span>
           <div class="text-xs text-purple-950 dark:text-purple-200 leading-relaxed">
             <strong>Study Tip from Coach:</strong> Don't try to study everything at once. Pick <strong>Step 1</strong> above, click <strong>"Start Focus Timer"</strong>, and study with full concentration for 25 minutes!
           </div>
-        </div>
-      `;
+        </div>`;
     }
 
     async function callGeminiAiMentor() {
@@ -2024,33 +1619,20 @@
       const loadingEl = document.getElementById('geminiAiLoading');
       const apiKey = apiKeyInput.value.trim();
 
-      if (!apiKey) {
-        showToast('Please enter your Gemini API Key first');
-        return;
-      }
-
-      try {
-        localStorage.setItem(GEMINI_API_KEY_STORAGE, apiKey);
-      } catch (e) {}
+      if (!apiKey) { showToast('Please enter your Gemini API Key first'); return; }
+      try { localStorage.setItem(GEMINI_API_KEY_STORAGE, apiKey); } catch (e) {}
 
       const pending = tasks.filter(t => t.status === 'Pending').map(t => ({
-        title: t.title,
-        subject: t.subject,
-        priority: t.priority,
-        dueDate: t.dueDate,
-        notes: t.notes || ''
+        title: t.title, subject: t.subject, priority: t.priority, dueDate: t.dueDate, notes: t.notes || ''
       }));
-
-      if (pending.length === 0) {
-        showToast('No pending assignments to analyze!');
-        return;
-      }
+      if (pending.length === 0) { showToast('No pending assignments to analyze!'); return; }
 
       loadingEl.classList.remove('hidden');
       responseBox.classList.add('hidden');
 
       const promptText = `
 You are a warm, highly effective academic study coach and mentor for a college student named ${currentUser?.name || 'Student'}.
+Today's date is ${todayStr()}.
 Analyze these active college assignments, deadlines, and notes:
 ${JSON.stringify(pending, null, 2)}
 
@@ -2063,40 +1645,34 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
 `;
 
       try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }]
-          })
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
         });
-
-        if (!res.ok) {
-          throw new Error(`Gemini API returned status ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Gemini API returned status ${res.status}`);
 
         const data = await res.json();
         const rawAiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
-        
-        // Simple Markdown conversion to HTML
-        let formattedHtml = escapeHtml(rawAiText)
+
+        // Escape first, then apply a small markdown subset.
+        const formattedHtml = escapeHtml(rawAiText)
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
           .replace(/\*(.*?)\*/g, '<em>$1</em>')
           .replace(/^### (.*$)/gim, '<h5 class="font-bold text-slate-900 dark:text-white mt-2">$1</h5>')
           .replace(/^## (.*$)/gim, '<h4 class="font-bold text-slate-900 dark:text-white mt-2.5">$1</h4>')
           .replace(/^# (.*$)/gim, '<h3 class="font-bold text-slate-900 dark:text-white mt-3">$1</h3>')
           .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
-          .replace(/^\- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+          .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
           .replace(/\n/g, '<br/>');
 
         responseBox.innerHTML = `
           <div class="flex items-center justify-between border-b border-purple-200 dark:border-purple-800 pb-2 mb-2">
             <span class="font-bold text-purple-700 dark:text-purple-300">✨ Gemini AI Mentor Response:</span>
-            <span class="text-[10px] text-slate-400">Live Gemini Flash</span>
+            <span class="text-[10px] text-slate-400">${escapeHtml(GEMINI_MODEL)}</span>
           </div>
-          <div>${formattedHtml}</div>
-        `;
+          <div>${formattedHtml}</div>`;
         responseBox.classList.remove('hidden');
         showToast('AI analysis generated successfully!');
       } catch (err) {
@@ -2108,23 +1684,50 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      loadUsersRegistry();
+    // ------------------------------------------------------------------
+    // Auth error messages
+    // ------------------------------------------------------------------
+    function authErrorText(err) {
+      const code = err && err.code;
+      const messages = {
+        'auth/invalid-email': 'Please enter a valid email address.',
+        'auth/user-not-found': 'No account found for this email. Create an account first.',
+        'auth/wrong-password': 'Incorrect email or password.',
+        'auth/invalid-credential': 'Incorrect email or password.',
+        'auth/email-already-in-use': 'This email already has an account. Please log in.',
+        'auth/weak-password': 'Choose a stronger password with at least 6 characters.',
+        'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
+        'auth/network-request-failed': 'Network error. Check your internet connection.',
+        'auth/operation-not-allowed': 'Email/Password sign-in is not enabled in Firebase Authentication.',
+        'auth/unauthorized-domain': 'This website domain is not authorized in Firebase (Authentication > Settings > Authorized domains).'
+      };
+      return messages[code] || (err && err.message) || 'Authentication failed. Please try again.';
+    }
 
-      // AI Study Coach Modal Listeners
+    // ------------------------------------------------------------------
+    // Init
+    // ------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      applyThemeLabel();
+      document.getElementById('taskDueDate').value = todayStr();
+      renderSubjectDropdown();
+      showLoginGateView();
+
+      // ---- Escape closes any open modal ----
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          ['imageLightboxModal', 'timerModal', 'syncModal', 'aiCoachModal'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+          });
+        }
+      });
+
+      // ---- AI Coach modal ----
       const aiCoachModal = document.getElementById('aiCoachModal');
-      const openAiCoachModalBtn = document.getElementById('openAiCoachModalBtn');
-      const quickCoachBtn = document.getElementById('quickCoachBtn');
-      const closeAiCoachModalBtn = document.getElementById('closeAiCoachModalBtn');
-      const toggleAiKeyPanel = document.getElementById('toggleAiKeyPanel');
       const aiKeyPanel = document.getElementById('aiKeyPanel');
       const aiKeyChevron = document.getElementById('aiKeyChevron');
-      const saveAndRunGeminiBtn = document.getElementById('saveAndRunGeminiBtn');
       const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
-      const copyStudyPlanBtn = document.getElementById('copyStudyPlanBtn');
-      const startTopTaskTimerBtn = document.getElementById('startTopTaskTimerBtn');
 
-      // Load saved Gemini API key if present
       try {
         const savedKey = localStorage.getItem(GEMINI_API_KEY_STORAGE);
         if (savedKey && geminiApiKeyInput) geminiApiKeyInput.value = savedKey;
@@ -2134,97 +1737,76 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         generateSmartStudyRoadmap();
         aiCoachModal.classList.remove('hidden');
       }
+      document.getElementById('openAiCoachModalBtn').addEventListener('click', openCoachModal);
+      document.getElementById('quickCoachBtn').addEventListener('click', openCoachModal);
+      document.getElementById('closeAiCoachModalBtn').addEventListener('click', () => aiCoachModal.classList.add('hidden'));
+      aiCoachModal.addEventListener('click', (e) => { if (e.target === aiCoachModal) aiCoachModal.classList.add('hidden'); });
+      document.getElementById('toggleAiKeyPanel').addEventListener('click', () => {
+        aiKeyPanel.classList.toggle('hidden');
+        aiKeyChevron.textContent = aiKeyPanel.classList.contains('hidden') ? '▾' : '▴';
+      });
+      document.getElementById('saveAndRunGeminiBtn').addEventListener('click', callGeminiAiMentor);
 
-      if (openAiCoachModalBtn) openAiCoachModalBtn.addEventListener('click', openCoachModal);
-      if (quickCoachBtn) quickCoachBtn.addEventListener('click', openCoachModal);
-      if (closeAiCoachModalBtn) closeAiCoachModalBtn.addEventListener('click', () => {
+      document.getElementById('copyStudyPlanBtn').addEventListener('click', async () => {
+        if (!cachedStudyPlanText) { showToast('No study plan to copy!'); return; }
+        const ok = await copyText(cachedStudyPlanText);
+        showToast(ok ? 'Study Action Plan copied to clipboard!' : 'Could not copy automatically');
+      });
+
+      document.getElementById('startTopTaskTimerBtn').addEventListener('click', () => {
         aiCoachModal.classList.add('hidden');
+        document.getElementById('timerModal').classList.remove('hidden');
+        document.getElementById('modeFocusBtn').click();
+        showToast('25m Study Focus Timer ready for your top assignment!');
       });
-      if (aiCoachModal) aiCoachModal.addEventListener('click', (e) => {
-        if (e.target === aiCoachModal) aiCoachModal.classList.add('hidden');
-      });
 
-      if (toggleAiKeyPanel) {
-        toggleAiKeyPanel.addEventListener('click', () => {
-          aiKeyPanel.classList.toggle('hidden');
-          aiKeyChevron.textContent = aiKeyPanel.classList.contains('hidden') ? '▾' : '▴';
-        });
-      }
-
-      if (saveAndRunGeminiBtn) {
-        saveAndRunGeminiBtn.addEventListener('click', callGeminiAiMentor);
-      }
-
-      if (copyStudyPlanBtn) {
-        copyStudyPlanBtn.addEventListener('click', () => {
-          if (!cachedStudyPlanText) {
-            showToast('No study plan to copy!');
-            return;
-          }
-          const tempTextArea = document.createElement('textarea');
-          tempTextArea.value = cachedStudyPlanText;
-          document.body.appendChild(tempTextArea);
-          tempTextArea.select();
-          try {
-            document.execCommand('copy');
-            showToast('Study Action Plan copied to clipboard!');
-          } catch (e) {
-            showToast('Could not copy automatically');
-          }
-          document.body.removeChild(tempTextArea);
-        });
-      }
-
-      if (startTopTaskTimerBtn) {
-        startTopTaskTimerBtn.addEventListener('click', () => {
-          aiCoachModal.classList.add('hidden');
-          document.getElementById('timerModal').classList.remove('hidden');
-          // Start 25m Focus session
-          document.getElementById('modeFocusBtn').click();
-          showToast('25m Study Focus Timer ready for your top assignment!');
-        });
-      }
-
-      document.getElementById('taskDueDate').value = '2026-10-22';
-
-      // Auth Page (Login / Sign Up / Google Connect)
-      const authModal = document.getElementById('authModal');
+      // ---- Auth page ----
       const loginForm = document.getElementById('loginForm');
       const signupForm = document.getElementById('signupForm');
       const tabLoginBtn = document.getElementById('tabLoginBtn');
       const tabSignupBtn = document.getElementById('tabSignupBtn');
       const authErrorMsg = document.getElementById('authErrorMsg');
 
+      function showAuthError(msg) { authErrorMsg.textContent = msg; authErrorMsg.classList.remove('hidden'); }
+
       function activateSignupTab() {
         signupForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
         authErrorMsg.classList.add('hidden');
-        tabSignupBtn.className = 'py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition';
+        tabSignupBtn.className = 'py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition';
         tabLoginBtn.className = 'py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition';
       }
-
       function activateLoginTab() {
         loginForm.classList.remove('hidden');
         signupForm.classList.add('hidden');
         authErrorMsg.classList.add('hidden');
-        tabLoginBtn.className = 'py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs transition';
+        tabLoginBtn.className = 'py-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition';
         tabSignupBtn.className = 'py-1.5 rounded-lg text-slate-600 dark:text-slate-400 transition';
       }
-
-      renderSubjectDropdown();
-      showLoginGateView();
       activateLoginTab();
-      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn('Auth persistence:', err));
-      firebase.auth().onAuthStateChanged(async (authUser) => {
-        if (authUser) {
-          try { await activateFirebaseSession(authUser); }
-          catch (err) { console.error(err); showLoginGateView(); }
-        } else {
-          currentUser = null;
-          document.getElementById('appDashboardWrapper').classList.add('hidden');
-          showLoginGateView();
-        }
-      });
+      tabLoginBtn.addEventListener('click', activateLoginTab);
+      tabSignupBtn.addEventListener('click', activateSignupTab);
+
+      const hideLoading = () => document.getElementById('authLoading').classList.add('hidden');
+
+      try {
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn('Auth persistence:', err));
+        firebase.auth().onAuthStateChanged(async (authUser) => {
+          if (authUser) {
+            try { await activateFirebaseSession(authUser); }
+            catch (err) { console.error(err); showLoginGateView(); }
+          } else {
+            currentUser = null;
+            updateCloudIndicatorUI();
+            showLoginGateView();
+          }
+          hideLoading();
+        });
+      } catch (err) {
+        console.error('Firebase failed to start:', err);
+        hideLoading();
+        showAuthError('Could not connect to Firebase. Check your internet connection and reload the page.');
+      }
 
       document.getElementById('openAuthModalBtn').addEventListener('click', () => showLoginGateView());
       document.getElementById('closeAuthModalBtn').addEventListener('click', () => {
@@ -2235,15 +1817,6 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         catch (err) { showToast('Logout failed: ' + (err.message || 'Please retry')); }
       });
 
-      // Disable the fake Google form: it did not authenticate Google accounts.
-      const googleConnectBtn = document.getElementById('googleConnectBtn');
-      if (googleConnectBtn) googleConnectBtn.classList.add('hidden');
-      const googleAuthForm = document.getElementById('googleAuthForm');
-      if (googleAuthForm) googleAuthForm.classList.add('hidden');
-
-      tabLoginBtn.addEventListener('click', activateLoginTab);
-      tabSignupBtn.addEventListener('click', activateSignupTab);
-
       loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value.trim().toLowerCase();
@@ -2252,10 +1825,18 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
           if (!email || !password) throw new Error('Enter your email address and password.');
           await firebase.auth().signInWithEmailAndPassword(email, password);
           authErrorMsg.classList.add('hidden');
-        } catch (err) {
-          authErrorMsg.textContent = authErrorText(err);
-          authErrorMsg.classList.remove('hidden');
-        }
+          document.getElementById('loginPin').value = '';
+        } catch (err) { showAuthError(authErrorText(err)); }
+      });
+
+      document.getElementById('forgotPasswordBtn').addEventListener('click', async () => {
+        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+        if (!email) { showAuthError('Type your email above first, then click "Forgot password".'); return; }
+        try {
+          await firebase.auth().sendPasswordResetEmail(email);
+          authErrorMsg.classList.add('hidden');
+          showToast('Password reset email sent (check spam too)');
+        } catch (err) { showAuthError(authErrorText(err)); }
       });
 
       signupForm.addEventListener('submit', async (e) => {
@@ -2263,16 +1844,9 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         const name = document.getElementById('signupName').value.trim();
         const email = document.getElementById('signupEmail').value.trim().toLowerCase();
         const password = document.getElementById('signupPin').value;
-        if (!name || !email || !password) {
-          authErrorMsg.textContent = 'Please fill in your name, email and password.';
-          authErrorMsg.classList.remove('hidden'); return;
-        }
-        if (password.length < 6) {
-          authErrorMsg.textContent = 'Password must be at least 6 characters.';
-          authErrorMsg.classList.remove('hidden'); return;
-        }
-        const userId = email.split('@')[0].replace(/[^a-z0-9_-]/g, '') || ('student_' + Date.now());
-        pendingFirebaseProfile = { name, email, userId };
+        if (!name || !email || !password) { showAuthError('Please fill in your name, email and password.'); return; }
+        if (password.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
+        pendingSignupName = name;
         try {
           const credential = await firebase.auth().createUserWithEmailAndPassword(email, password);
           await credential.user.updateProfile({ displayName: name });
@@ -2280,143 +1854,77 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
           document.getElementById('signupEmail').value = '';
           document.getElementById('signupPin').value = '';
           authErrorMsg.classList.add('hidden');
-          await activateFirebaseSession(credential.user);
           showToast('Account created successfully!');
         } catch (err) {
-          pendingFirebaseProfile = null;
-          authErrorMsg.textContent = authErrorText(err);
-          authErrorMsg.classList.remove('hidden');
+          pendingSignupName = null;
+          showAuthError(authErrorText(err));
         }
       });
 
-      function authErrorText(err) {
-        const code = err && err.code;
-        const messages = {
-          'auth/invalid-email': 'Please enter a valid email address.',
-          'auth/user-not-found': 'No account found for this email. Create an account first.',
-          'auth/wrong-password': 'Incorrect email or password.',
-          'auth/invalid-credential': 'Incorrect email or password.',
-          'auth/email-already-in-use': 'This email already has an account. Please log in.',
-          'auth/weak-password': 'Choose a stronger password with at least 6 characters.',
-          'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
-          'auth/network-request-failed': 'Network error. Check your internet connection.',
-          'auth/operation-not-allowed': 'Email/Password sign-in is not enabled in Firebase Authentication.'
-        };
-        return messages[code] || (err && err.message) || 'Authentication failed. Please try again.';
-      }
-
-      // Cross-System Sync & Cloud DB Modal Logic
+      // ---- Sync / backup modal ----
       updateCloudIndicatorUI();
       const syncModal = document.getElementById('syncModal');
       document.getElementById('openSyncModalBtn').addEventListener('click', () => {
         document.getElementById('importSyncCodeInput').value = '';
-        document.getElementById('cloudDbUrlInput').value = getCloudDbUrl();
         updateCloudIndicatorUI();
         syncModal.classList.remove('hidden');
       });
+      document.getElementById('closeSyncModalBtn').addEventListener('click', () => syncModal.classList.add('hidden'));
+      syncModal.addEventListener('click', (e) => { if (e.target === syncModal) syncModal.classList.add('hidden'); });
 
-      document.getElementById('saveCloudDbUrlBtn').addEventListener('click', async () => {
-        const rawUrl = document.getElementById('cloudDbUrlInput').value.trim().replace(/\/+$/, '');
-        if (!rawUrl || !rawUrl.startsWith('http')) {
-          showToast('Please enter a valid Firebase Database URL (https://...)');
-          return;
-        }
-        try {
-          localStorage.setItem(CLOUD_DB_URL_KEY, rawUrl);
-        } catch (e) {}
-        updateCloudIndicatorUI();
+      document.getElementById('syncNowBtn').addEventListener('click', async () => {
         if (!currentUser || !currentUser.uid) { showToast('Please sign in first.'); return; }
-        await pushCurrentUserToCloud();
-        showToast('Cloud Database connected & synced!');
-      });
-
-      document.getElementById('disconnectCloudDbBtn').addEventListener('click', () => {
-        try {
-          localStorage.removeItem(CLOUD_DB_URL_KEY);
-        } catch (e) {}
-        document.getElementById('cloudDbUrlInput').value = '';
-        updateCloudIndicatorUI();
-        showToast('Cloud Database disconnected (Local Mode active)');
-      });
-      document.getElementById('closeSyncModalBtn').addEventListener('click', () => {
-        syncModal.classList.add('hidden');
-      });
-      syncModal.addEventListener('click', (e) => {
-        if (e.target === syncModal) syncModal.classList.add('hidden');
+        const ok = await pushCurrentUserToCloud();
+        showToast(ok ? 'Synced to cloud!' : 'Sync failed. Check internet / Firebase rules.');
       });
 
       function buildAccountSyncPayload() {
-        return {
-          version: 1,
-          user: currentUser,
-          subjects: SUBJECTS,
-          tasks: tasks
-        };
+        return { version: 2, user: currentUser ? { userId: currentUser.userId, name: currentUser.name } : null, subjects: SUBJECTS, tasks: tasks };
       }
 
-      document.getElementById('copySyncCodeBtn').addEventListener('click', () => {
-        const code = btoa(unescape(encodeURIComponent(JSON.stringify(buildAccountSyncPayload()))));
-        const input = document.getElementById('importSyncCodeInput');
-        input.value = code;
-        input.select();
-        try {
-          document.execCommand('copy');
-        } catch (err) {}
-        showToast(`Sync Code copied for @${currentUser.userId}!`);
+      document.getElementById('copySyncCodeBtn').addEventListener('click', async () => {
+        const code = b64EncodeUtf8(JSON.stringify(buildAccountSyncPayload()));
+        document.getElementById('importSyncCodeInput').value = code;
+        const ok = await copyText(code);
+        showToast(ok ? 'Sync Code copied!' : 'Code is in the box below — copy it manually');
       });
 
       document.getElementById('downloadSyncFileBtn').addEventListener('click', () => {
-        const jsonStr = JSON.stringify(buildAccountSyncPayload(), null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(buildAccountSyncPayload(), null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${currentUser.userId}_assignments_backup.json`;
+        a.download = `${(currentUser && currentUser.userId) || 'student'}_assignments_backup.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast(`Backup file downloaded for @${currentUser.userId}!`);
+        showToast('Backup file downloaded!');
       });
 
       function applyRestoredPayload(payload) {
-        if (!payload || !payload.user || !payload.user.userId) {
+        if (!payload || typeof payload !== 'object' || (!Array.isArray(payload.tasks) && !Array.isArray(payload.subjects))) {
           showToast('Invalid Sync Code or Backup File!');
           return;
         }
-        if (!currentUser || !currentUser.uid) {
-          showToast('Sign in first, then restore data into your own account.');
-          return;
-        }
-        const restoredUser = { ...currentUser };
-        if (Array.isArray(payload.subjects)) {
-          SUBJECTS = payload.subjects;
-          saveSubjects();
-        }
-        if (Array.isArray(payload.tasks)) {
-          tasks = payload.tasks;
-          saveTasks();
-        }
+        if (!currentUser || !currentUser.uid) { showToast('Sign in first, then restore data into your own account.'); return; }
+        if (!confirm('Restore will REPLACE your current subjects and assignments with the backup. Continue?')) return;
+
+        if (Array.isArray(payload.subjects)) { SUBJECTS = sanitizeSubjects(payload.subjects); saveSubjects(); }
+        if (Array.isArray(payload.tasks)) { tasks = sanitizeTasks(payload.tasks); saveTasks(); }
         renderSubjectDropdown();
+        resetFormState();
         updateCurrentUserHeaderUI();
         renderAll();
         syncModal.classList.add('hidden');
-        showToast(`Account and assignments restored for @${restoredUser.userId}!`);
+        showToast('Backup restored successfully!');
       }
 
       document.getElementById('restoreSyncCodeBtn').addEventListener('click', () => {
         const rawCode = document.getElementById('importSyncCodeInput').value.trim();
-        if (!rawCode) {
-          showToast('Please paste a Sync Code first');
-          return;
-        }
-        try {
-          const decoded = decodeURIComponent(escape(atob(rawCode)));
-          const parsed = JSON.parse(decoded);
-          applyRestoredPayload(parsed);
-        } catch (err) {
-          showToast('Invalid Sync Code!');
-        }
+        if (!rawCode) { showToast('Please paste a Sync Code first'); return; }
+        try { applyRestoredPayload(JSON.parse(b64DecodeUtf8(rawCode))); }
+        catch (err) { showToast('Invalid Sync Code!'); }
       });
 
       document.getElementById('uploadSyncFileInput').addEventListener('change', (e) => {
@@ -2424,77 +1932,44 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
-          try {
-            const parsed = JSON.parse(evt.target.result);
-            applyRestoredPayload(parsed);
-          } catch (err) {
-            showToast('Backup file is not valid JSON!');
-          }
+          try { applyRestoredPayload(JSON.parse(evt.target.result)); }
+          catch (err) { showToast('Backup file is not valid JSON!'); }
         };
         reader.readAsText(file);
         e.target.value = '';
       });
 
-      // Clock
+      // ---- Clock ----
       const updateClock = () => {
-        const now = new Date();
-        document.getElementById('liveClockBadge').textContent = now.toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        document.getElementById('liveClockBadge').textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
       };
       updateClock();
       setInterval(updateClock, 30000);
 
-      // Theme Toggle
-      document.getElementById('themeToggleBtn').addEventListener('click', () => {
-        const htmlEl = document.documentElement;
-        htmlEl.classList.toggle('dark');
-        const isDark = htmlEl.classList.contains('dark');
-        document.getElementById('themeToggleText').textContent = isDark ? 'Light Mode' : 'Dark Mode';
-      });
+      // ---- Theme toggle ----
+      document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
 
-      // Toggle Subject Manager Drawer
+      // ---- Subject manager ----
       document.getElementById('toggleManageSubjectsBtn').addEventListener('click', () => {
-        const panel = document.getElementById('manageSubjectsPanel');
-        panel.classList.toggle('hidden');
+        document.getElementById('manageSubjectsPanel').classList.toggle('hidden');
       });
+      document.getElementById('cancelSubjectEditBtn').addEventListener('click', resetSubjectForm);
 
-      document.getElementById('cancelSubjectEditBtn').addEventListener('click', () => {
-        resetSubjectForm();
-      });
-
-      // Add or Edit Subject Form
       document.getElementById('addSubjectForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const oldName = document.getElementById('editingSubjectOldName').value;
-        const nameInput = document.getElementById('newSubjectName');
-        const colorSelect = document.getElementById('newSubjectColor');
-        const newName = nameInput.value.trim();
+        const newName = document.getElementById('newSubjectName').value.trim();
+        const colorKey = document.getElementById('newSubjectColor').value;
 
-        if (!newName) {
-          showToast('Please enter a subject name');
-          return;
-        }
-
-        const palette = COLOR_PALETTES[colorSelect.value] || COLOR_PALETTES.blue;
+        if (!newName) { showToast('Please enter a subject name'); return; }
+        const palette = COLOR_PALETTES[colorKey] || COLOR_PALETTES.blue;
 
         if (oldName) {
-          // Editing existing subject
           const duplicate = SUBJECTS.find(s => s.name.toLowerCase() === newName.toLowerCase() && s.name !== oldName);
-          if (duplicate) {
-            showToast('This subject already exists');
-            return;
-          }
+          if (duplicate) { showToast('This subject already exists'); return; }
           const target = SUBJECTS.find(s => s.name === oldName);
-          if (target) {
-            target.name = newName;
-            Object.assign(target, palette);
-          }
-          // Update tasks that used the old subject name
-          tasks.forEach(t => {
-            if (t.subject === oldName) t.subject = newName;
-          });
+          if (target) { target.name = newName; Object.assign(target, palette); }
+          tasks.forEach(t => { if (t.subject === oldName) t.subject = newName; });
           if (selectedSubjectFilter === oldName) selectedSubjectFilter = newName;
           saveSubjects();
           saveTasks();
@@ -2503,15 +1978,8 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
           renderAll();
           showToast(`Subject updated to "${newName}"`);
         } else {
-          // Adding new subject
-          if (SUBJECTS.some(s => s.name.toLowerCase() === newName.toLowerCase())) {
-            showToast('This subject already exists');
-            return;
-          }
-          SUBJECTS.push({
-            name: newName,
-            ...palette
-          });
+          if (SUBJECTS.some(s => s.name.toLowerCase() === newName.toLowerCase())) { showToast('This subject already exists'); return; }
+          SUBJECTS.push({ name: newName, ...palette });
           saveSubjects();
           renderSubjectDropdown();
           document.getElementById('taskSubject').value = newName;
@@ -2521,54 +1989,38 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         }
       });
 
-      // Image Upload
+      // ---- Image upload ----
       document.getElementById('taskImageInput').addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (file) handleImageFileUpload(file);
       });
-
       document.getElementById('clearImageBtn').addEventListener('click', () => {
         currentUploadedImageBase64 = '';
         updateFormImagePreviewUI();
       });
 
-      // Lightbox Close
+      // ---- Lightbox ----
       document.getElementById('closeLightboxBtn').addEventListener('click', () => {
         document.getElementById('imageLightboxModal').classList.add('hidden');
       });
       document.getElementById('imageLightboxModal').addEventListener('click', (e) => {
-        if (e.target.id === 'imageLightboxModal') {
-          document.getElementById('imageLightboxModal').classList.add('hidden');
-        }
+        if (e.target.id === 'imageLightboxModal') document.getElementById('imageLightboxModal').classList.add('hidden');
       });
 
-      // Focus Timer Modal Toggle
-      document.getElementById('toggleTimerModalBtn').addEventListener('click', () => {
-        document.getElementById('timerModal').classList.remove('hidden');
-      });
-      document.getElementById('closeTimerModalBtn').addEventListener('click', () => {
-        document.getElementById('timerModal').classList.add('hidden');
-      });
+      // ---- Timer modal ----
+      document.getElementById('toggleTimerModalBtn').addEventListener('click', () => document.getElementById('timerModal').classList.remove('hidden'));
+      document.getElementById('closeTimerModalBtn').addEventListener('click', () => document.getElementById('timerModal').classList.add('hidden'));
       document.getElementById('timerModal').addEventListener('click', (e) => {
-        if (e.target.id === 'timerModal') {
-          document.getElementById('timerModal').classList.add('hidden');
-        }
+        if (e.target.id === 'timerModal') document.getElementById('timerModal').classList.add('hidden');
       });
 
-      // Assignment Form Submit
+      // ---- Assignment form ----
       document.getElementById('assignmentForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        const titleInput = document.getElementById('taskTitle');
-        const subjectInput = document.getElementById('taskSubject');
-        const dueDateInput = document.getElementById('taskDueDate');
-        const priorityInput = document.getElementById('taskPriority');
-        const statusInput = document.getElementById('taskStatus');
-        const notesInput = document.getElementById('taskNotes');
+        const title = document.getElementById('taskTitle').value.trim();
+        const dueDate = document.getElementById('taskDueDate').value;
         const editId = document.getElementById('editTaskId').value;
         const errBox = document.getElementById('formErrorMsg');
-
-        const title = titleInput.value.trim();
-        const dueDate = dueDateInput.value;
 
         if (!title || !dueDate) {
           errBox.textContent = 'Please enter both the Assignment Title and Due Date.';
@@ -2577,30 +2029,22 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         }
         errBox.classList.add('hidden');
 
+        const data = {
+          title,
+          subject: document.getElementById('taskSubject').value,
+          dueDate,
+          priority: document.getElementById('taskPriority').value,
+          status: document.getElementById('taskStatus').value,
+          notes: document.getElementById('taskNotes').value.trim(),
+          imageData: currentUploadedImageBase64
+        };
+
         if (editId) {
           const existing = tasks.find(t => t.id === editId);
-          if (existing) {
-            existing.title = title;
-            existing.subject = subjectInput.value;
-            existing.dueDate = dueDate;
-            existing.priority = priorityInput.value;
-            existing.status = statusInput.value;
-            existing.notes = notesInput.value.trim();
-            existing.imageData = currentUploadedImageBase64;
-          }
+          if (existing) Object.assign(existing, data);
           showToast('Assignment updated');
         } else {
-          const newTask = {
-            id: 'task-' + Date.now(),
-            title,
-            subject: subjectInput.value,
-            dueDate,
-            priority: priorityInput.value,
-            status: statusInput.value,
-            notes: notesInput.value.trim(),
-            imageData: currentUploadedImageBase64
-          };
-          tasks.unshift(newTask);
+          tasks.unshift({ id: newId(), ...data });
           showToast('Assignment added');
         }
 
@@ -2609,12 +2053,9 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         renderAll();
       });
 
-      // Cancel Edit
-      document.getElementById('cancelEditBtn').addEventListener('click', () => {
-        resetFormState();
-      });
+      document.getElementById('cancelEditBtn').addEventListener('click', resetFormState);
 
-      // Status Filter Tabs
+      // ---- Filters ----
       document.querySelectorAll('.status-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           selectedStatusFilter = btn.getAttribute('data-status-filter');
@@ -2625,35 +2066,20 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
           renderTasksList();
         });
       });
+      document.getElementById('filterPriority').addEventListener('change', (e) => { selectedPriorityFilter = e.target.value; renderTasksList(); });
+      document.getElementById('sortTasksSelect').addEventListener('change', (e) => { currentSortOrder = e.target.value; renderTasksList(); });
+      document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value; renderTasksList(); });
 
-      // Priority & Sort & Search
-      document.getElementById('filterPriority').addEventListener('change', (e) => {
-        selectedPriorityFilter = e.target.value;
-        renderTasksList();
-      });
-
-      document.getElementById('sortTasksSelect').addEventListener('change', (e) => {
-        currentSortOrder = e.target.value;
-        renderTasksList();
-      });
-
-      document.getElementById('searchInput').addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        renderTasksList();
-      });
-
-      // Export CSV
+      // ---- CSV export (with protection against spreadsheet formula injection) ----
       document.getElementById('exportCsvBtn').addEventListener('click', () => {
+        const cell = (v) => {
+          let s = String(v ?? '');
+          if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+          return `"${s.replace(/"/g, '""')}"`;
+        };
         const headers = ['Title', 'Subject', 'Due Date', 'Priority', 'Status', 'Notes'];
-        const rows = tasks.map(t => [
-          `"${String(t.title || '').replace(/"/g, '""')}"`,
-          `"${String(t.subject || '').replace(/"/g, '""')}"`,
-          `"${String(t.dueDate || '')}"`,
-          `"${String(t.priority || '')}"`,
-          `"${String(t.status || '')}"`,
-          `"${String(t.notes || '').replace(/"/g, '""')}"`
-        ]);
-        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const rows = tasks.map(t => [cell(t.title), cell(t.subject), cell(t.dueDate), cell(t.priority), cell(t.status), cell(t.notes)]);
+        const csvContent = '\ufeff' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2666,39 +2092,29 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         showToast('CSV exported');
       });
 
-      // Pomodoro Timer
+      // ---- Timer controls ----
       document.getElementById('timerStartPauseBtn').addEventListener('click', () => {
         if (timerRunning) {
-          clearInterval(timerInterval);
-          timerRunning = false;
+          timerTick();
+          stopTimer();
         } else {
+          if (timerSeconds <= 0) timerSeconds = timerMode === 'focus' ? 25 * 60 : 5 * 60;
           timerRunning = true;
+          timerEndAt = Date.now() + timerSeconds * 1000;
           clearInterval(timerInterval);
-          timerInterval = setInterval(() => {
-            if (timerSeconds > 0) {
-              timerSeconds--;
-              updatePomodoroUI();
-            } else {
-              clearInterval(timerInterval);
-              timerRunning = false;
-              showToast(timerMode === 'focus' ? 'Focus session complete!' : 'Break complete!');
-              updatePomodoroUI();
-            }
-          }, 1000);
+          timerInterval = setInterval(timerTick, 500);
         }
         updatePomodoroUI();
       });
 
       document.getElementById('timerResetBtn').addEventListener('click', () => {
-        clearInterval(timerInterval);
-        timerRunning = false;
+        stopTimer();
         timerSeconds = timerMode === 'focus' ? 25 * 60 : 5 * 60;
         updatePomodoroUI();
       });
 
       document.getElementById('modeFocusBtn').addEventListener('click', () => {
-        clearInterval(timerInterval);
-        timerRunning = false;
+        stopTimer();
         timerMode = 'focus';
         timerSeconds = 25 * 60;
         document.getElementById('timerModeLabel').textContent = '25m Deep Study Session';
@@ -2708,8 +2124,7 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
       });
 
       document.getElementById('modeBreakBtn').addEventListener('click', () => {
-        clearInterval(timerInterval);
-        timerRunning = false;
+        stopTimer();
         timerMode = 'break';
         timerSeconds = 5 * 60;
         document.getElementById('timerModeLabel').textContent = '5m Refresh Break';
@@ -2718,19 +2133,26 @@ Keep the advice clean, formatted with bullet points and bold headers. Do not use
         updatePomodoroUI();
       });
 
-      // Clear All Tasks
-      const clearBtn = document.getElementById('clearAllTasksBtn');
-      if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-          tasks = [];
-          saveTasks();
-          resetFormState();
+      // ---- Clear all ----
+      document.getElementById('clearAllTasksBtn').addEventListener('click', () => {
+        if (tasks.length === 0) { showToast('No assignments to clear'); return; }
+        if (!confirm(`Delete ALL ${tasks.length} assignments? This cannot be undone (cloud copy is also replaced).`)) return;
+        tasks = [];
+        saveTasks();
+        resetFormState();
+        renderAll();
+        showToast('All assignments cleared');
+      });
+
+      // If the tab stays open past midnight, refresh deadline badges and the default date when it becomes visible again.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && currentUser) {
+          if (!document.getElementById('editTaskId').value && !document.getElementById('taskTitle').value) {
+            document.getElementById('taskDueDate').value = todayStr();
+          }
           renderAll();
-          showToast('All assignments cleared');
-        });
-      }
-
-
+        }
+      });
     });
   </script>
 </body>
